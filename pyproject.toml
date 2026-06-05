@@ -1,0 +1,20 @@
+[project]
+name = "tickr"
+version = "0.1.0"
+description = "A Bloomberg terminal from first principles — ambient feeds of things that move, in your terminal corner."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "rich>=13",
+    "textual>=0.80",
+]
+
+[project.scripts]
+tickr = "tickr.tui:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["tickr*"]

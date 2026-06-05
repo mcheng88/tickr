@@ -1,0 +1,46 @@
+# tickr configuration.
+
+[dashboard]
+# Layout: a list of columns, each a list of stacked panels. The last column
+# flexes to fill the window width. Available: "stocks", "claude_usage", "news".
+columns = [["stocks", "claude_usage"], ["news"]]
+# Default seconds between data fetches (a source can override its own).
+refresh_seconds = 60
+# Animation cadence — how often the pane redraws (drives the news ticker crawl).
+tick_seconds = 0.5
+# Width (columns) of the left side panels. Widen if usage numbers get clipped.
+left_width = 56
+# true  = take over the window (clean dedicated panel; Ctrl-C restores your shell).
+# false = render inline under your prompt (you can keep typing, but it restacks).
+fullscreen = true
+
+[claude_usage]
+# Claude Code config homes to scan. The row label is derived from the directory
+# name (~/.claude-berry -> "berry", ~/.claude -> "default"). Trim this list to
+# just the accounts you care about. Shows tokens + API-equivalent $ today and
+# usage in the current 5-hour rolling window with a reset countdown.
+homes = ["~/.claude", "~/.claude-berry", "~/.claude-cheng"]
+
+[news]
+# Vertical headline feed (top-stories firehose). Shows `rows` headlines and
+# rolls by one every `scroll_seconds`; refetches new headlines infrequently.
+refresh_seconds = 300
+rows = 14             # how many headlines visible at once
+scroll_seconds = 4   # seconds before the feed advances one headline
+# Direct RSS feeds — real article links, so cmd-click and the in-terminal reader
+# (enter / o) work. Merged + deduped + sorted newest-first.
+feeds = [
+    "https://feeds.bbci.co.uk/news/rss.xml",
+    "https://www.theguardian.com/world/rss",
+    "https://feeds.npr.org/1001/rss.xml",
+    "https://feeds.arstechnica.com/arstechnica/index",
+]
+# query = "technology OR AI"   # if `feeds` is removed: Google News firehose (browser-only links)
+# Drop headlines containing any of these (case-insensitive substrings):
+exclude = ["horoscope"]
+
+[stocks]
+# Yahoo Finance symbols. Plain tickers work as-is (AAPL, NVDA). Indices use a
+# leading caret: ^IXIC = Nasdaq Composite, ^GSPC = S&P 500, ^DJI = Dow.
+# All symbols are fetched in a single batched request per cycle.
+tickers = ["^GSPC", "^IXIC", "NVDA", "AAPL", "GOOG", "MSFT", "AMZN", "META", "TSLA"]
