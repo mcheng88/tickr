@@ -55,6 +55,14 @@ Reinstall after dependency changes: `uv tool install --editable . --force`.
 
 ## Backlog
 
-GitHub Issues in `mcheng88/tickr`. Open: #1 prediction markets (Polymarket),
-#2 world oddities, #3 vertical fill, #4 usage bars, #5 loading/failed state,
-#6 reader + news polish, #7 user widgets dir (`~/.config/tickr/widgets/*.py`).
+GitHub Issues in `mcheng88/tickr`. Open:
+- #2 world oddities panel (launch / quakes / ISS)
+- #3 resizable columns (fill-height done)
+- #4 usage consumption bars (needs plan caps)
+- #5 per-panel loading/failed state
+- #6 reader + news polish (reader half done; remaining: parallelize news fetch,
+  per-feed source labels, richer extraction)
+- #7 user widgets dir (`~/.config/tickr/widgets/*.py`)
+
+Done (#1 prediction markets, and unticketed: weather panel, interactive panels +
+detail popups, preset catalog, theme persistence, usage auto-discovery).

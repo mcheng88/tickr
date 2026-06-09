@@ -18,51 +18,89 @@ Not a to-do list, not a project dashboard. Just live, glanceable signal: markets
 
 ## Install
 
-Requires Python 3.11+.
+Requires Python 3.11+. Recommended — puts a `tickr` command on your PATH (editable,
+so source edits take effect on next launch):
 
 ```bash
-git clone <repo> tickr && cd tickr
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e .
+uv tool install --editable .
 ```
+
+Or in a virtualenv: `python3 -m venv .venv && source .venv/bin/activate && pip install -e .`
 
 ## Run
 
 ```bash
-tickr            # or: python -m tickr
+tickr                 # run the dashboard from anywhere
+tickr catalog         # list curated news topics + ticker sets
 ```
 
-Pop the window into a corner of your terminal. `Ctrl-C` to quit. The clock and staleness age (`↻ Ns`) tick every second; network fetches are throttled to `refresh_seconds`.
+`q` or `Ctrl-C` to quit. The header clock ticks every second; network fetches are
+throttled per source.
+
+### Keys
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | move the row cursor in the focused panel |
+| `←` / `→` | move focus between panels (incl. into the left column from news) |
+| `enter` / `o` / click | open the highlighted row — article reader (news) or detail popup (stocks/predict) |
+| `space` | pause/resume the news auto-scroll |
+| `Ctrl-P` | command palette (switch theme — it autosaves) |
+| `esc` / `q` | close a popup |
+
+## Panels
+
+All free, no API keys.
+
+| Panel | What it shows |
+|-------|---------------|
+| **stocks** | Watchlist + indices via Yahoo (batched, true day-change, market state). Gold/oil/rates work too (`GC=F`, `CL=F`, `^TNX`). |
+| **news** | Curated headlines from direct RSS feeds, deduped + newest-first. Open any in an in-terminal reader (full arXiv papers; paywalled sources fall back to the browser). |
+| **predict** | Live Polymarket odds by topic — favorite outcome + 24h move; drill in for the full outcome list. |
+| **weather** | Current conditions + 4-day forecast as ASCII art (Open-Meteo; location auto-detects). |
+| **claude usage** | Claude Code token/cost today + week + 5-hour window, auto-discovered across `~/.claude*` accounts (100% local). |
 
 ## Configure
 
-Edit `config.toml`:
+Edit `config.toml`. Layout is columns of stacked panels; the last column fills the width:
 
 ```toml
 [dashboard]
-source = "stocks"        # active panel
-refresh_seconds = 60
+theme = "tokyo-night"    # switch live with Ctrl-P; autosaves here
+columns = [["weather", "stocks", "predict", "claude_usage"], ["news"]]
 
 [stocks]
-tickers = ["SPY", "^IXIC", "NVDA", "AAPL", "GOOG"]
+tickers = ["^GSPC", "^IXIC", "NVDA", "AAPL", "GC=F"]
+# sets = ["indices", "gold"]      # or reference curated catalog groups
+
+[news]
+topics = ["business", "tech", "politics"]   # curated feed bundles (see `tickr catalog`)
 ```
 
-Plain tickers work as-is. Indices use a leading caret — `^IXIC` (Nasdaq Composite), `^GSPC` (S&P 500), `^DJI` (Dow). Point `TICKR_CONFIG` at a config elsewhere if you like.
-
-Data: Yahoo Finance quotes — free, no API key. Every symbol is fetched in a single batched request per cycle (a 15-name watchlist polled each minute is ~1 request/min), with true day-change vs. previous close and pre/after-hours market state.
+Reference curated **feed topics** and **ticker sets** by name instead of pasting
+URLs/symbols — browse them with `tickr catalog`. Point `TICKR_CONFIG` at a config
+elsewhere if you like.
 
 ## Architecture
 
-Every panel is one `Source` (`tickr/sources/base.py`): a `fetch()` that pulls a little data and a `render()` that draws it. The app loop ([`tickr/app.py`](tickr/app.py)) stacks the configured sources in one pane, fetches each on its own interval, keeps the last good frame on failure, and redraws every `tick_seconds` so time-derived renders (like the news ticker) animate. Adding a panel = one file in `tickr/sources/` registered in `sources/__init__.py`.
+Every panel is one `Source` (`tickr/sources/base.py`): a `fetch()` that pulls a little
+data, and either a `render()` (static panels) or `list_rows()` + `detail()` (interactive
+panels — focusable, selectable, with a detail popup). The app ([`tickr/tui.py`](tickr/tui.py),
+a [Textual](https://textual.textualize.io/) app) lays the configured sources out in
+columns, fetches each on its own interval in a worker thread, and keeps the last good
+frame on failure. Adding a panel = one file in `tickr/sources/` registered in
+`sources/__init__.py`.
 
 ## Roadmap
 
 - [x] **stocks** — watchlist + indices via Yahoo (batched, true day-change)
-- [x] **claude usage** — Claude Code token/cost today + week + 5-hour-window across accounts (100% local)
-- [x] **news** — scrolling top-stories ticker (Google News firehose)
-- [x] **multi-panel** — stack any sources in one pane
-- [ ] **prediction markets** — Polymarket live odds
-- [ ] **world oddities** — next rocket launch, earthquakes, ISS overhead
-- [ ] **fill / layout** — expand sections to fill the window; usage consumption bars (needs plan caps)
+- [x] **claude usage** — token/cost today + week + 5h-window, auto-discovered across accounts (100% local)
+- [x] **news** — curated RSS feeds + in-terminal reader (arXiv full-text, paywall fallback)
+- [x] **prediction markets** — Polymarket live odds, with per-event outcome detail
+- [x] **weather** — ASCII-art current + forecast (Open-Meteo)
+- [x] **interactive panels** — keyboard nav + detail popups; preset catalog; theme persistence
+- [ ] **world oddities** — next rocket launch, earthquakes, ISS overhead (#2)
+- [ ] **usage consumption bars** — needs plan caps (#4)
+- [ ] **per-panel loading/failed state** (#5) · **resizable columns** (#3) · **user widgets dir** (#7)
 
 Cross-platform (macOS + Linux). Runs great in [kitty](https://sw.kovidgoyal.net/kitty/).
