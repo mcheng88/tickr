@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http.cookiejar import CookieJar
 
+from rich.console import Group
 from rich.table import Table
 from rich.text import Text
 
@@ -45,6 +46,16 @@ class Quote:
     last: float | None
     change_pct: float | None  # true day change vs. previous close
     state: str = ""
+    raw: dict = field(default_factory=dict)  # full Yahoo quote, for the detail popup
+
+
+def _human(n) -> str:
+    if not isinstance(n, (int, float)):
+        return "—"
+    for div, suf in ((1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "K")):
+        if abs(n) >= div:
+            return f"{n / div:,.2f}{suf}"
+    return f"{n:,.0f}"
 
 
 class _Yahoo:
@@ -89,6 +100,7 @@ class _Yahoo:
 
 class StocksSource(Source):
     title = "STOCKS"
+    interactive = True
 
     def __init__(self, config):
         super().__init__(config)
@@ -120,6 +132,7 @@ class StocksSource(Source):
                     last=q.get("regularMarketPrice"),
                     change_pct=q.get("regularMarketChangePercent"),
                     state=_STATE.get(q.get("marketState", ""), q.get("marketState", "")),
+                    raw=q,
                 )
             )
         self._state = next((x.state for x in quotes if x.state), "")
@@ -147,3 +160,56 @@ class StocksSource(Source):
                 chg = Text(f"{arrow}{abs(q.change_pct):.2f}%", style=color)
             t.add_row(Text(label, style="bold"), Text(f"{q.last:,.2f}"), chg)
         return t
+
+    def list_rows(self, data: list[Quote], width: int) -> list[tuple[Text, str]]:
+        price_w, chg_w = 11, 9
+        label_w = max(6, width - price_w - chg_w - 2)
+        rows: list[tuple[Text, str]] = []
+        for q in data or []:
+            label = _LABELS.get(q.symbol, q.symbol.lstrip("^"))
+            label = (label[: label_w - 1] + "…") if len(label) > label_w else label.ljust(label_w)
+            t = Text()
+            t.append(label, style="bold")
+            if q.last is None:
+                t.append(f"{'—':>{price_w}}", style="dim")
+                t.append(f"{'·':>{chg_w + 1}}", style="dim")
+            else:
+                up = (q.change_pct or 0) >= 0
+                t.append(f"{q.last:>{price_w},.2f}")
+                chg = "—" if q.change_pct is None else f"{'▲' if up else '▼'}{abs(q.change_pct):.2f}%"
+                t.append(f"{chg:>{chg_w + 1}}", style="dim" if q.change_pct is None else ("green" if up else "red"))
+            rows.append((t, q.symbol))
+        return rows
+
+    def detail(self, key: str, data: list[Quote]) -> Group:
+        q = next((x for x in (data or []) if x.symbol == key), None)
+        if q is None:
+            return Group(Text("(no data)", style="dim"))
+        r = q.raw
+        up = (q.change_pct or 0) >= 0
+        head = Text()
+        head.append(f"{q.last:,.2f}" if q.last is not None else "—", style="bold white")
+        if q.change_pct is not None:
+            chg = r.get("regularMarketChange")
+            head.append(f"   {'▲' if up else '▼'}{abs(chg):,.2f} ({abs(q.change_pct):.2f}%)",
+                        style="green" if up else "red")
+        if q.state:
+            head.append(f"   {q.state}", style="yellow")
+
+        t = Table.grid(padding=(0, 2))
+        t.add_column(style="grey70", no_wrap=True)
+        t.add_column(justify="right", no_wrap=True)
+        rng = lambda lo, hi: (f"{r.get(lo):,.2f} – {r.get(hi):,.2f}"
+                              if isinstance(r.get(lo), (int, float)) else "—")
+        num = lambda k, p=2: (f"{r.get(k):,.{p}f}" if isinstance(r.get(k), (int, float)) else "—")
+        for k, v in [
+            ("Open", num("regularMarketOpen")),
+            ("Prev close", num("regularMarketPreviousClose")),
+            ("Day range", rng("regularMarketDayLow", "regularMarketDayHigh")),
+            ("52-wk range", rng("fiftyTwoWeekLow", "fiftyTwoWeekHigh")),
+            ("Volume", _human(r.get("regularMarketVolume"))),
+            ("Mkt cap", _human(r.get("marketCap"))),
+        ]:
+            t.add_row(k, v)
+        name = q.name or q.symbol
+        return Group(Text(name, style="bold cyan"), Text(q.symbol, style="dim"), Text(""), head, Text(""), t)

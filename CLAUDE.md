@@ -47,6 +47,11 @@ Reinstall after dependency changes: `uv tool install --editable . --force`.
   `/html/<id>` (`_arxiv_html_url`); falls back to the original if no HTML version.
 - A widget/panel = a `Source` subclass (`fetch()`/`render()`/`status()`, see
   `sources/base.py`) registered in the `SOURCES` dict (`sources/__init__.py`).
+- Panels are either static (`SectionPanel`, uses `render()`) or **interactive**
+  (`DataPanel`/`NewsPanel`, OptionLists). A source opts in with `interactive=True`
+  and implements `list_rows(data, width)` + `detail(key, data)` instead of relying
+  on `render()`. ←/→ move focus between interactive panels; enter/o/click opens a
+  `DetailScreen` popup. stocks + predict are interactive; news opens the reader.
 
 ## Backlog
 

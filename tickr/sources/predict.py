@@ -5,6 +5,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
+from rich.console import Group
 from rich.table import Table
 from rich.text import Text
 
@@ -20,15 +21,25 @@ _DEFAULT_TAGS = ["politics"]  # Fed / elections / geopolitics. (No crypto.)
 
 
 @dataclass
+class Outcome:
+    name: str
+    pct: float  # probability, 0..100
+    delta: float | None  # 24h change in points
+
+
+@dataclass
 class Market:
-    label: str
-    pct: float  # favorite outcome probability, 0..100
-    delta: float | None  # 24h change in the favorite's probability, in points
+    label: str  # event title
+    pct: float  # favorite outcome probability
+    delta: float | None  # favorite's 24h change
+    outcomes: list[Outcome]  # all outcomes, sorted most-likely first
+    volume24: float
+    end: str  # event end date (ISO)
 
 
-def _favorite(event: dict) -> Market | None:
-    """Reduce an event to its single most-likely Yes/No outcome."""
-    best: tuple[float, float | None] | None = None
+def _market(event: dict) -> Market | None:
+    """Reduce an event to its favorite outcome + the full sorted outcome list."""
+    outs: list[Outcome] = []
     for m in event.get("markets", []):
         try:
             if json.loads(m.get("outcomes") or "[]") != ["Yes", "No"]:
@@ -36,12 +47,15 @@ def _favorite(event: dict) -> Market | None:
             p = float(json.loads(m.get("outcomePrices") or "[]")[0])
         except (ValueError, TypeError, IndexError, json.JSONDecodeError):
             continue
-        if best is None or p > best[0]:
-            d = m.get("oneDayPriceChange")
-            best = (p, d * 100 if isinstance(d, (int, float)) else None)
-    if best is None:
+        d = m.get("oneDayPriceChange")
+        name = (m.get("groupItemTitle") or m.get("question") or "").strip()
+        outs.append(Outcome(name, p * 100, d * 100 if isinstance(d, (int, float)) else None))
+    if not outs:
         return None
-    return Market(event.get("title", "").strip(), best[0] * 100, best[1])
+    outs.sort(key=lambda o: o.pct, reverse=True)
+    fav = outs[0]
+    return Market(event.get("title", "").strip(), fav.pct, fav.delta, outs,
+                  event.get("volume24hr") or 0, str(event.get("endDate") or "")[:10])
 
 
 class PredictSource(Source):
@@ -49,6 +63,7 @@ class PredictSource(Source):
     favorite's probability + its 24h move."""
 
     title = "PREDICT"
+    interactive = True
 
     def _events(self, tag: str) -> list[dict]:
         q = urllib.parse.urlencode(
@@ -75,7 +90,7 @@ class PredictSource(Source):
 
         rows: list[Market] = []
         for e in ranked:
-            m = _favorite(e)
+            m = _market(e)
             if m is None or not m.label:
                 continue
             if m.pct >= 97:  # drop near-settled markets (low info)
@@ -87,19 +102,50 @@ class PredictSource(Source):
                 break
         return rows
 
-    def render(self, data: list[Market]) -> Table:
+    @staticmethod
+    def _delta_text(delta: float | None, width: int = 4) -> Text:
+        if delta is None or abs(delta) < 0.5:
+            return Text(f"{'·':>{width}}", style="dim")
+        up = delta >= 0
+        return Text(f"{('▲' if up else '▼') + str(round(abs(delta))):>{width}}",
+                    style="green" if up else "red")
+
+    def list_rows(self, data: list[Market], width: int) -> list[tuple[Text, str]]:
+        pct_w, d_w = 5, 4
+        label_w = max(6, width - pct_w - d_w - 2)
+        rows: list[tuple[Text, str]] = []
+        for i, m in enumerate(data or []):
+            label = (m.label[: label_w - 1] + "…") if len(m.label) > label_w else m.label.ljust(label_w)
+            t = Text(label)
+            t.append(f"{m.pct:>{pct_w - 1}.0f}%", style="bold cyan")
+            t.append(" ")
+            t.append_text(self._delta_text(m.delta, d_w))
+            rows.append((t, str(i)))
+        return rows
+
+    def detail(self, key: str, data: list[Market]) -> Group:
+        try:
+            m = (data or [])[int(key)]
+        except (ValueError, IndexError):
+            return Group(Text("(no data)", style="dim"))
+        t = Table.grid(padding=(0, 2))
+        t.add_column(no_wrap=True, max_width=34)
+        t.add_column(justify="right", no_wrap=True)
+        t.add_column(justify="right", no_wrap=True)
+        shown = [o for o in m.outcomes if o.pct >= 0.5][:12] or m.outcomes[:3]
+        for o in shown:
+            t.add_row(Text(o.name or "—"), Text(f"{o.pct:.0f}%", style="bold cyan"),
+                      self._delta_text(o.delta))
+        foot = Text(f"24h vol ${m.volume24/1e6:.1f}M", style="grey58")
+        if m.end:
+            foot.append(f"   ends {m.end}", style="grey58")
+        return Group(Text(m.label, style="bold cyan"), Text(""), t, Text(""), foot)
+
+    def render(self, data: list[Market]) -> Table:  # fallback (non-interactive mode)
         t = Table.grid(padding=(0, 1), expand=True)
-        t.add_column("q", justify="left", no_wrap=True, ratio=1)
-        t.add_column("pct", justify="right", no_wrap=True)
-        t.add_column("d", justify="right", no_wrap=True)
+        t.add_column(justify="left", no_wrap=True, ratio=1)
+        t.add_column(justify="right", no_wrap=True)
         for m in data or []:
-            pct = Text(f"{m.pct:.0f}%", style="bold cyan")
-            if m.delta is None or abs(m.delta) < 0.5:
-                d = Text("·", style="dim")
-            else:
-                up = m.delta >= 0
-                d = Text(f"{'▲' if up else '▼'}{abs(m.delta):.0f}", style="green" if up else "red")
-            t.add_row(Text(m.label, overflow="ellipsis", no_wrap=True), pct, d)
-        if not data:
-            t.add_row(Text("(no markets)", style="dim"), Text(""), Text(""))
+            t.add_row(Text(m.label, overflow="ellipsis", no_wrap=True),
+                      Text(f"{m.pct:.0f}%", style="bold cyan"))
         return t

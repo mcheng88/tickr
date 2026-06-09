@@ -68,6 +68,70 @@ class NewsPanel(OptionList):
             self.highlighted = (cur + 1) % self.option_count
 
 
+class DataPanel(OptionList):
+    """Interactive tabular panel (stocks, predict). ↑/↓ moves the row cursor;
+    enter / 'o' / click opens a detail popup for the highlighted row."""
+
+    def __init__(self, source):
+        super().__init__()
+        self.source = source
+        self.border_title = source.title
+        self._data = None
+
+    def apply(self, data) -> None:
+        self._data = data
+        keep = self.highlighted
+        self.clear_options()
+        width = self.content_size.width or 50
+        rows = self.source.list_rows(data, width)
+        self.add_options([Option(row, id=str(key)) for row, key in rows])
+        if keep is not None and self.option_count:
+            self.highlighted = min(keep, self.option_count - 1)
+        elif self.option_count:
+            self.highlighted = 0  # show a cursor row from the start
+        st = self.source.status()
+        self.border_title = f"{self.source.title}  {st}".rstrip()
+
+    def open_detail(self) -> None:
+        if self.highlighted is None or self._data is None:
+            return
+        opt = self.get_option_at_index(self.highlighted)
+        if opt is None or opt.id is None:
+            return
+        self.app.push_screen(DetailScreen(self.source.title, self.source.detail(opt.id, self._data)))
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        event.stop()  # don't let it bubble to the app's news handler
+        self.open_detail()
+
+
+class DetailScreen(ModalScreen):
+    """Compact popup (smaller than the article reader) showing a row's detail —
+    a stock's full quote or a prediction event's complete outcome list."""
+
+    CSS = """
+    DetailScreen { align: center middle; }
+    #detail { width: auto; min-width: 40; max-width: 70; height: auto; max-height: 80%;
+              border: round $accent; background: $surface; padding: 1 2; }
+    """
+    BINDINGS = [("escape", "close", "Close"), ("q", "close", "Close")]
+
+    def __init__(self, title: str, content):
+        super().__init__()
+        self._title = title
+        self._content = content
+
+    def compose(self) -> ComposeResult:
+        box = VerticalScroll(id="detail")
+        box.border_title = self._title
+        with box:
+            yield Static(self._content)
+        yield Footer()
+
+    def action_close(self) -> None:
+        self.dismiss()
+
+
 class ArticleScreen(ModalScreen):
     """In-terminal reader: fetches the article and shows extracted text. Bloomberg-
     style — read without leaving the terminal. 'b' falls back to the browser."""
@@ -124,13 +188,18 @@ class TickrApp(App):
     .side { width: 56; height: 1fr; }
     .fill { width: 1fr; height: 1fr; }
     SectionPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 1; }
-    SectionPanel.grow { height: 1fr; }  /* last panel in a side column fills the leftover height */
+    DataPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 1; }
     NewsPanel { border: round #5f5f5f; padding: 0 1; height: 1fr; }
+    .grow { height: 1fr; }  /* last panel in a side column fills the leftover height */
+    DataPanel:focus, NewsPanel:focus { border: round $accent; }
+    DataPanel > .option-list--option-highlighted,
     NewsPanel > .option-list--option-highlighted { background: $accent 30%; color: $text; }
     """
     BINDINGS = [
         ("space", "toggle_pause", "Pause/resume scroll"),
-        ("o", "open", "Open highlighted"),
+        ("left", "focus_panel('prev')", "Prev panel"),
+        ("right", "focus_panel('next')", "Next panel"),
+        ("o", "open", "Open / detail"),
         ("q", "quit", "Quit"),
     ]
 
@@ -145,12 +214,17 @@ class TickrApp(App):
         self.columns = _layout_columns(cfg)
         self.names = [n for col in self.columns for n in col]
         self.sources = {n: load_source(cfg, n) for n in self.names}
-        self.widgets = {
-            n: (NewsPanel(self.sources[n]) if n == _NEWS else SectionPanel(self.sources[n]))
-            for n in self.names
-        }
+        self.widgets = {n: self._make_panel(n) for n in self.names}
         self.paused = False
         self._theme_ready = False  # gate theme autosave until after startup applies the saved theme
+
+    def _make_panel(self, name: str):
+        src = self.sources[name]
+        if name == _NEWS:
+            return NewsPanel(src)
+        if getattr(src, "interactive", False):
+            return DataPanel(src)
+        return SectionPanel(src)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -162,7 +236,7 @@ class TickrApp(App):
                         w = self.widgets[name]
                         # In a side column, let the bottom panel stretch to fill
                         # the leftover vertical space (no dead gap below it).
-                        if ci != last and ri == len(col) - 1 and isinstance(w, SectionPanel):
+                        if ci != last and ri == len(col) - 1 and isinstance(w, (SectionPanel, DataPanel)):
                             w.add_class("grow")
                         yield w
         yield Footer()
@@ -224,12 +298,28 @@ class TickrApp(App):
             self.push_screen(ArticleScreen(option.id, headline))
 
     def action_open(self) -> None:
-        news = self.widgets.get(_NEWS)
-        if news is not None and news.highlighted is not None:
-            self._open(news.get_option_at_index(news.highlighted))
+        f = self.focused
+        if isinstance(f, DataPanel):
+            f.open_detail()
+        elif isinstance(f, NewsPanel) and f.highlighted is not None:
+            self._open(f.get_option_at_index(f.highlighted))
+
+    def action_focus_panel(self, direction: str) -> None:
+        """←/→ move focus between the interactive panels (incl. into the left
+        column from news)."""
+        panels = [w for w in self.widgets.values() if isinstance(w, (DataPanel, NewsPanel))]
+        if not panels:
+            return
+        step = 1 if direction == "next" else -1
+        try:
+            i = panels.index(self.focused) + step
+        except ValueError:
+            i = 0
+        panels[i % len(panels)].focus()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
-        self._open(event.option)
+        if isinstance(event.option_list, NewsPanel):  # DataPanels handle their own
+            self._open(event.option)
 
     def _persist_theme(self, theme: str) -> None:
         """Write the theme into config.toml's [dashboard] table. Idempotent —
