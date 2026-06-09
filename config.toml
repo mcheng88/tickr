@@ -5,7 +5,7 @@ theme = "tokyo-night"
 # Layout: a list of columns, each a list of stacked panels. The last column
 # flexes to fill the window width.
 # Available: "weather", "stocks", "claude_usage", "predict", "news".
-columns = [["weather", "stocks", "claude_usage", "predict"], ["news"]]
+columns = [["weather", "stocks", "predict", "claude_usage"], ["news"]]
 # Default seconds between data fetches (a source can override its own).
 refresh_seconds = 60
 # Animation cadence — how often the pane redraws (drives the news ticker crawl).

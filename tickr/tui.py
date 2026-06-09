@@ -187,12 +187,13 @@ class TickrApp(App):
     Screen { background: $background; }
     .side { width: 56; height: 1fr; }
     .fill { width: 1fr; height: 1fr; }
-    SectionPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 1; }
-    DataPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 1;
-                scrollbar-size-vertical: 1; }
+    SectionPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 0; }
+    /* Interactive list panels flex to share the column height and scroll inside
+       when content overflows — so the column always fills and never spills. */
+    DataPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: 1fr; min-height: 5;
+                margin-bottom: 0; scrollbar-size-vertical: 1; }
     NewsPanel { border: round #5f5f5f; padding: 0 1; height: 1fr; scrollbar-size-vertical: 1; }
     OptionList > .option-list--option { padding: 0; }  /* drop the default per-row padding */
-    .grow { height: 1fr; }  /* last panel in a side column fills the leftover height */
     DataPanel:focus, NewsPanel:focus { border: round $accent; }
     DataPanel > .option-list--option-highlighted,
     NewsPanel > .option-list--option-highlighted { background: $accent 30%; color: $text; }
@@ -234,13 +235,8 @@ class TickrApp(App):
         with Horizontal():
             for ci, col in enumerate(self.columns):
                 with Vertical(classes="fill" if ci == last else "side"):
-                    for ri, name in enumerate(col):
-                        w = self.widgets[name]
-                        # In a side column, let the bottom panel stretch to fill
-                        # the leftover vertical space (no dead gap below it).
-                        if ci != last and ri == len(col) - 1 and isinstance(w, (SectionPanel, DataPanel)):
-                            w.add_class("grow")
-                        yield w
+                    for name in col:
+                        yield self.widgets[name]
         yield Footer()
 
     def on_mount(self) -> None:
