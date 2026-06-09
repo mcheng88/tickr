@@ -59,10 +59,21 @@ def _arxiv_html_url(url: str) -> str | None:
     return f"https://arxiv.org/html/{m.group(1)}" if m else None
 
 
+_MAX_BYTES = 4_000_000  # cap the read so a giant/binary response can't blow up the UI
+
+
+class _NotReadable(Exception):
+    """Response isn't HTML text (e.g. a PDF or other binary)."""
+
+
 def _get_html(url: str, timeout: int) -> str:
     req = urllib.request.Request(url, headers=_HEADERS)
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read().decode("utf-8", "replace")
+        ctype = (r.headers.get_content_type() or "").lower()
+        if ctype and not (ctype.startswith("text/") or "xml" in ctype or "html" in ctype):
+            raise _NotReadable(ctype)  # PDF, image, octet-stream, …
+        raw = r.read(_MAX_BYTES)
+    return raw.decode("utf-8", "replace")
 
 
 def _extract(html: str) -> str:
@@ -86,6 +97,8 @@ def fetch_article(url: str, timeout: int = 12) -> str:
             pass  # no HTML version (older paper) → fall back to the original page
     try:
         html = _get_html(url, timeout)
+    except _NotReadable:
+        return "This link isn't a readable article (PDF or other file).\n\nPress 'b' to open it in your browser."
     except urllib.error.HTTPError as e:
         if e.code in (401, 403, 451):
             return ("This source blocks in-terminal reading (paywall or bot protection).\n\n"

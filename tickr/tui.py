@@ -3,6 +3,7 @@ from __future__ import annotations
 import webbrowser
 from functools import partial
 
+from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
@@ -54,7 +55,9 @@ class NewsPanel(OptionList):
                 continue
             if link:
                 seen.add(link)
-            opts.append(Option(f"• {t}", id=(link or None)))
+            # Text() prompt → rendered literally; a headline with '[' won't be
+            # mis-parsed as Rich markup (would crash the OptionList).
+            opts.append(Option(Text(f"• {t}"), id=(link or None)))
         self.add_options(opts)
         if keep is not None and self.option_count:
             self.highlighted = min(keep, self.option_count - 1)
@@ -88,10 +91,12 @@ class ArticleScreen(ModalScreen):
         self.headline = headline
 
     def compose(self) -> ComposeResult:
+        # markup=False: headlines/URLs/article text are untrusted and routinely
+        # contain '[' — never parse them as Rich markup (would MarkupError-crash).
         with VerticalScroll(id="reader"):
-            yield Static(self.headline, id="reader-title")
-            yield Static(self.url, id="reader-meta")
-            yield Static("Loading…", id="reader-body")
+            yield Static(self.headline, id="reader-title", markup=False)
+            yield Static(self.url, id="reader-meta", markup=False)
+            yield Static("Loading…", id="reader-body", markup=False)
         yield Footer()
 
     def on_mount(self) -> None:
