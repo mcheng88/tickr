@@ -36,13 +36,13 @@ _SHORT = {"clear": "clr", "partly": "part", "cloudy": "cld", "fog": "fog",
 
 # 5-line ASCII glyphs (wttr.in style). Style colors are applied at render time.
 _ART = {
-    "clear":  [r"   \  /  ", r"  _ .-.  ", r"  ( o )  ", r"  ` - `  ", r"   /  \  "],
-    "partly": [r"   \ /   ", r"  _.-.   ", r" .(   ).  ", r" (__(_)  ", r"         "],
-    "cloudy": [r"         ", r"   .--.  ", r" .(    ). ", r"(___.__)_)", r"         "],
-    "fog":    [r"         ", r" _ - _ - ", r"  _ - _  ", r" _ - _ - ", r"         "],
-    "rain":   [r"   .--.  ", r" .(    ). ", r"(___.__)_)", r"  ' ' ' '", r" ' ' ' ' "],
-    "snow":   [r"   .--.  ", r" .(    ). ", r"(___.__)_)", r"  *  *  *", r" *  *  * "],
-    "storm":  [r"   .--.  ", r" .(    ). ", r"(___.__)_)", r"  /_ /_  ", r"  /  /   "],
+    "clear":  [r"   \   /   ", r"    .-.    ", r" --(   )-- ", r"    `-'    ", r"   /   \   "],
+    "partly": [r"   \  /    ", r" _ /''.-.  ", r"   \_(   ).", r"   /(___(__)", r"           "],
+    "cloudy": [r"           ", r"    .--.   ", r"  .(    ).  ", r" (___.__)__)", r"           "],
+    "fog":    [r"           ", r"  _ - _ -  ", r"   _ - _   ", r"  _ - _ -  ", r"           "],
+    "rain":   [r"    .-.    ", r"   (   ).  ", r"  (___(__) ", r"   ' ' ' ' ", r"  ' ' ' '  "],
+    "snow":   [r"    .-.    ", r"   (   ).  ", r"  (___(__) ", r"   *  *  * ", r"  *  *  *  "],
+    "storm":  [r"    .-.    ", r"   (   ).  ", r"  (___(__) ", r"   /_  /_  ", r"   /   /   "],
 }
 _ART_STYLE = {"clear": "yellow", "partly": "yellow", "cloudy": "grey70",
               "fog": "grey58", "rain": "blue", "snow": "bright_white", "storm": "magenta"}
