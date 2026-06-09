@@ -1,6 +1,7 @@
 # tickr configuration.
 
 [dashboard]
+theme = "tokyo-night"
 # Layout: a list of columns, each a list of stacked panels. The last column
 # flexes to fill the window width. Available: "stocks", "claude_usage", "news".
 columns = [["stocks", "claude_usage"], ["news"]]
@@ -13,34 +14,59 @@ left_width = 56
 # true  = take over the window (clean dedicated panel; Ctrl-C restores your shell).
 # false = render inline under your prompt (you can keep typing, but it restacks).
 fullscreen = true
+# Color theme. Switch live in the command palette (Ctrl-P -> "theme") and it
+# autosaves here. Or set manually — e.g. "textual-dark", "textual-light", "nord",
+# "gruvbox", "dracula", "tokyo-night", "monokai", "flexoki", "catppuccin-mocha".
+# Unset = Textual default. (Currently set above in [dashboard].)
 
 [claude_usage]
-# Claude Code config homes to scan. The row label is derived from the directory
-# name (~/.claude-berry -> "berry", ~/.claude -> "default"). Trim this list to
-# just the accounts you care about. Shows tokens + API-equivalent $ today and
-# usage in the current 5-hour rolling window with a reset countdown.
-homes = ["~/.claude", "~/.claude-berry", "~/.claude-cheng"]
+# By default tickr auto-discovers every ~/.claude* config home (any with a
+# projects/ dir), so new accounts appear with no edit; idle ones are hidden.
+# The row label is derived from the dir name (~/.claude-berry -> "berry",
+# ~/.claude -> "default"). Shows API-equivalent $ today/week + the 5-hour window.
+# Uncomment to pin an explicit list instead of auto-discovery:
+# homes = ["~/.claude", "~/.claude-berry", "~/.claude-cheng"]
 
 [news]
 # Vertical headline feed (top-stories firehose). Shows `rows` headlines and
 # rolls by one every `scroll_seconds`; refetches new headlines infrequently.
+# Shortcut: instead of pasting feed URLs, reference curated topics from the
+# catalog — `tickr catalog` lists them. Merged with any explicit `feeds` below.
+# topics = ["business", "tech", "politics"]
 refresh_seconds = 300
 rows = 14             # how many headlines visible at once
 scroll_seconds = 4   # seconds before the feed advances one headline
 # Direct RSS feeds — real article links, so cmd-click and the in-terminal reader
 # (enter / o) work. Merged + deduped + sorted newest-first.
+# Curated to business / finance / econ / tech / politics — topic-specific section
+# feeds (not the general "world" firehose) so the feed isn't crime/tabloid noise.
+# NOTE: feeds must be RSS (<item>); Atom feeds (The Verge) aren't parsed yet.
 feeds = [
-    "https://feeds.bbci.co.uk/news/rss.xml",
-    "https://www.theguardian.com/world/rss",
-    "https://feeds.npr.org/1001/rss.xml",
+    # Business / finance / economics (all readable in the in-term reader)
+    "https://feeds.bbci.co.uk/news/business/rss.xml",
+    "https://www.theguardian.com/business/rss",
+    "https://feeds.npr.org/1006/rss.xml",
+    "https://www.cnbc.com/id/10001147/device/rss/rss.html",
+    "https://fortune.com/feed/",
+    # Tech
     "https://feeds.arstechnica.com/arstechnica/index",
+    "https://feeds.bbci.co.uk/news/technology/rss.xml",
+    "https://techcrunch.com/feed/",
+    "https://hnrss.org/frontpage",
+    # Politics
+    "https://www.theguardian.com/us-news/us-politics/rss",
+    "https://feeds.npr.org/1014/rss.xml",
 ]
 # query = "technology OR AI"   # if `feeds` is removed: Google News firehose (browser-only links)
-# Drop headlines containing any of these (case-insensitive substrings):
-exclude = ["horoscope"]
+# Drop headlines containing any of these (case-insensitive substrings). Safety net
+# on top of topic feeds — catches stray celebrity/sport/royal items that slip in.
+exclude = ["horoscope", "celebrity", "kardashian", "royal family"]
 
 [stocks]
 # Yahoo Finance symbols. Plain tickers work as-is (AAPL, NVDA). Indices use a
 # leading caret: ^IXIC = Nasdaq Composite, ^GSPC = S&P 500, ^DJI = Dow.
 # All symbols are fetched in a single batched request per cycle.
-tickers = ["^GSPC", "^IXIC", "NVDA", "AAPL", "GOOG", "MSFT", "AMZN", "META", "TSLA"]
+# Shortcut: `sets` references curated ticker groups from the catalog (run
+# `tickr catalog`), merged with any explicit `tickers` below. e.g.:
+# sets = ["indices", "gold"]
+tickers = ["^GSPC", "^IXIC", "NVDA", "AAPL", "GOOG", "MSFT", "AMZN", "META", "TSLA", "GC=F"]

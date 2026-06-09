@@ -69,9 +69,14 @@ class NewsSource(Source):
     title = "NEWS"
 
     def fetch(self) -> list[tuple[str, str]]:
+        from ..catalog import feeds_for
+
         exclude = [str(x).lower() for x in self.config.get("exclude", [])]
         count = int(self.config.get("count", 40))
-        feeds = self.config.get("feeds")
+        # `topics` names expand to curated catalog feeds and merge with any
+        # explicit `feeds`, so config can say topics = ["business", "tech"].
+        feeds = list(self.config.get("feeds") or [])
+        feeds += [u for u in feeds_for(self.config.get("topics", [])) if u not in feeds]
         if feeds:
             # Direct RSS feeds: real article links (cmd-click + in-term reader work).
             items: list[tuple[str, str, float]] = []

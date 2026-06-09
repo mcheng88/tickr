@@ -1,0 +1,92 @@
+# tickr preset catalog — curated, known-good feeds and ticker sets.
+#
+# Reference these by name in config.toml instead of pasting URLs/symbols:
+#   [news]   topics = ["business", "tech", "politics"]   # merged with any `feeds`
+#   [stocks] sets   = ["indices", "megacap", "gold"]      # merged with any `tickers`
+#
+# Browse it from the shell:
+#   tickr catalog            # list every topic + ticker set
+#   tickr catalog business   # show the feeds in one topic
+#
+# All feeds here have been checked to return RSS <item>s (Atom-only feeds and
+# bot-blocked ones are deliberately excluded). Add new ones only after verifying
+# with: curl -sL <url> | grep -c '<item'
+#
+# NO crypto. Ever. (Prediction markets are the "for fun" panel; crypto is out.)
+
+# ---------------------------------------------------------------------------
+# News topics — each expands to a list of RSS feed URLs.
+# ---------------------------------------------------------------------------
+
+[feeds.business]
+description = "Business / finance / economics"
+# All readable in the in-terminal reader. (MarketWatch + Economist deliberately
+# excluded — bot-walled, even via readability proxy; reader can't open them.)
+urls = [
+    "https://feeds.bbci.co.uk/news/business/rss.xml",
+    "https://www.theguardian.com/business/rss",
+    "https://feeds.npr.org/1006/rss.xml",
+    "https://www.cnbc.com/id/10001147/device/rss/rss.html",
+    "https://fortune.com/feed/",
+]
+
+[feeds.tech]
+description = "Technology"
+urls = [
+    "https://feeds.arstechnica.com/arstechnica/index",
+    "https://feeds.bbci.co.uk/news/technology/rss.xml",
+    "https://www.theguardian.com/technology/rss",
+    "https://techcrunch.com/feed/",
+    "https://hnrss.org/frontpage",
+]
+
+[feeds.politics]
+description = "US politics"
+urls = [
+    "https://www.theguardian.com/us-news/us-politics/rss",
+    "https://feeds.npr.org/1014/rss.xml",
+]
+
+[feeds.world]
+description = "World news (broad — includes hard news)"
+urls = [
+    "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "https://www.theguardian.com/world/rss",
+    "https://feeds.npr.org/1001/rss.xml",
+]
+
+[feeds.science]
+description = "Science & environment"
+urls = [
+    "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+    "https://feeds.npr.org/1007/rss.xml",
+    "https://www.theguardian.com/environment/rss",
+]
+
+# ---------------------------------------------------------------------------
+# Ticker sets — each expands to a list of Yahoo Finance symbols.
+# ---------------------------------------------------------------------------
+
+[tickers.indices]
+description = "Major US indices"
+symbols = ["^GSPC", "^IXIC", "^DJI", "^RUT"]
+
+[tickers.megacap]
+description = "Mega-cap tech"
+symbols = ["NVDA", "AAPL", "MSFT", "GOOG", "AMZN", "META", "TSLA"]
+
+[tickers.ai-semi]
+description = "AI / semiconductors"
+symbols = ["NVDA", "AMD", "TSM", "AVGO", "MU", "SMCI"]
+
+[tickers.rates-commodities]
+description = "Treasury yield, gold, oil"
+symbols = ["^TNX", "GC=F", "CL=F"]
+
+[tickers.gold]
+description = "Gold futures"
+symbols = ["GC=F"]
+
+[tickers.fx]
+description = "Major FX pairs"
+symbols = ["EURUSD=X", "JPY=X", "GBPUSD=X"]

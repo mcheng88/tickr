@@ -35,7 +35,7 @@ _STATE = {
 
 
 # Friendly display labels for index symbols (Yahoo carets read poorly).
-_LABELS = {"^GSPC": "S&P", "^IXIC": "NASDAQ", "^DJI": "DOW", "^RUT": "RUSSELL"}
+_LABELS = {"^GSPC": "S&P", "^IXIC": "NASDAQ", "^DJI": "DOW", "^RUT": "RUSSELL", "GC=F": "GOLD"}
 
 
 @dataclass
@@ -96,7 +96,16 @@ class StocksSource(Source):
         self._state = ""
 
     def fetch(self) -> list[Quote]:
-        symbols = [str(t).strip().upper() for t in self.config.get("tickers", []) if str(t).strip()]
+        from ..catalog import tickers_for
+
+        # `sets` names expand to curated catalog symbols and merge with any
+        # explicit `tickers`, so config can say sets = ["indices", "gold"].
+        raw = list(self.config.get("tickers", [])) + tickers_for(self.config.get("sets", []))
+        symbols: list[str] = []
+        for t in raw:
+            s = str(t).strip().upper()
+            if s and s not in symbols:
+                symbols.append(s)
         by_symbol = {q.get("symbol", "").upper(): q for q in self._yahoo.quotes(symbols)}
         quotes: list[Quote] = []
         for sym in symbols:

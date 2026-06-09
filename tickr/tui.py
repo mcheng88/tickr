@@ -45,7 +45,17 @@ class NewsPanel(OptionList):
     def apply(self, items: list[tuple[str, str]]) -> None:
         keep = self.highlighted
         self.clear_options()
-        self.add_options([Option(f"• {t}", id=(link or None)) for t, link in items])
+        # Option ids must be unique; feeds occasionally repeat a URL, so drop
+        # later duplicates (items without a link keep id=None, never collide).
+        seen: set[str] = set()
+        opts = []
+        for t, link in items:
+            if link and link in seen:
+                continue
+            if link:
+                seen.add(link)
+            opts.append(Option(f"• {t}", id=(link or None)))
+        self.add_options(opts)
         if keep is not None and self.option_count:
             self.highlighted = min(keep, self.option_count - 1)
 
@@ -61,10 +71,10 @@ class ArticleScreen(ModalScreen):
 
     CSS = """
     ArticleScreen { align: center middle; }
-    #reader { width: 84%; height: 86%; border: round #5f5f5f; background: $surface; padding: 1 2; }
+    #reader { width: 96%; height: 96%; border: round #5f5f5f; background: $surface; padding: 1 3; }
+    #reader-body { margin-top: 1; }
     #reader-title { text-style: bold; color: $accent; }
     #reader-meta { color: $text-muted; }
-    #reader-body { margin-top: 1; }
     """
     BINDINGS = [
         ("escape", "close", "Close"),
@@ -122,6 +132,7 @@ class TickrApp(App):
         super().__init__()
         self.cfg = cfg
         dash = cfg.get("dashboard", {})
+        self._saved_theme = dash.get("theme")  # persisted theme name, applied on mount
         self.default_refresh = int(dash.get("refresh_seconds", 60))
         self.scroll_seconds = float(cfg.get(_NEWS, {}).get("scroll_seconds", 4))
         self.left_width = dash.get("left_width")
@@ -133,6 +144,7 @@ class TickrApp(App):
             for n in self.names
         }
         self.paused = False
+        self._theme_ready = False  # gate theme autosave until after startup applies the saved theme
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -145,6 +157,11 @@ class TickrApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
+        if self._saved_theme:
+            try:
+                self.theme = self._saved_theme
+            except Exception:
+                pass  # unknown theme name in config → keep default
         if self.left_width:
             for node in self.query(".side"):
                 node.styles.width = int(self.left_width)
@@ -155,6 +172,13 @@ class TickrApp(App):
         if _NEWS in self.widgets:
             self.set_interval(self.scroll_seconds, self._advance_news)
             self.widgets[_NEWS].focus()
+        self._theme_ready = True  # from here on, theme changes autosave
+
+    def watch_theme(self, theme: str) -> None:
+        """Persist the theme to config.toml whenever it changes (e.g. picked live
+        in the Ctrl-P palette) — no manual save step."""
+        if self._theme_ready and theme:
+            self._persist_theme(theme)
 
     # --- data plumbing: blocking fetch in a thread, apply on the UI thread ---
 
@@ -196,8 +220,43 @@ class TickrApp(App):
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         self._open(event.option)
 
+    def _persist_theme(self, theme: str) -> None:
+        """Write the theme into config.toml's [dashboard] table. Idempotent —
+        a no-op if config already has this theme (palette previews don't thrash
+        the file)."""
+        import re
+
+        from .app import _find_config
+
+        path = _find_config()
+        text = path.read_text()
+        if re.search(r'(?m)^\s*theme\s*=\s*"%s"\s*$' % re.escape(theme), text):
+            return  # already persisted
+        line = f'theme = "{theme}"'
+        if re.search(r"(?m)^\s*theme\s*=", text):
+            text = re.sub(r"(?m)^\s*theme\s*=.*$", line, text, count=1)
+        elif re.search(r"(?m)^\[dashboard\]", text):
+            text = re.sub(r"(?m)^(\[dashboard\].*)$", r"\1\n" + line, text, count=1)
+        else:
+            text = f"[dashboard]\n{line}\n\n" + text
+        path.write_text(text)
+
 
 def main(argv: list[str] | None = None) -> None:
+    import argparse
+
+    ap = argparse.ArgumentParser(prog="tickr", description="Ambient terminal feeds of things that move.")
+    sub = ap.add_subparsers(dest="cmd")
+    cat = sub.add_parser("catalog", help="list curated news topics + ticker sets (or one entry's detail)")
+    cat.add_argument("name", nargs="?", help="topic or ticker-set name to show in detail")
+    args = ap.parse_args(argv)
+
+    if args.cmd == "catalog":
+        from .catalog import render_catalog
+
+        print(render_catalog(args.name))
+        return
+
     TickrApp(load_config()).run()
 
 

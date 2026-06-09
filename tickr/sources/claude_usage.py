@@ -35,6 +35,20 @@ _MTIME_WINDOW = 8 * 24 * 3600  # only parse transcripts touched in the last ~8 d
 _DEFAULT_HOMES = ["~/.claude", "~/.claude-berry", "~/.claude-cheng"]
 
 
+def _discover_homes() -> list[str]:
+    """Auto-find every Claude Code config home: any ~/.claude* dir with a
+    projects/ subdir. New accounts show up with no config edit. `.claude` sorts
+    first; idle homes are hidden later by render()."""
+    try:
+        found = [p for p in Path.home().glob(".claude*") if (p / "projects").is_dir()]
+    except OSError:
+        return _DEFAULT_HOMES
+    if not found:
+        return _DEFAULT_HOMES
+    found.sort(key=lambda p: (p.name != ".claude", p.name))
+    return [str(p) for p in found]
+
+
 @dataclass
 class AcctUsage:
     label: str
@@ -155,7 +169,8 @@ class ClaudeUsageSource(Source):
     title = "CLAUDE USAGE"
 
     def fetch(self) -> list[AcctUsage]:
-        homes = self.config.get("homes") or _DEFAULT_HOMES
+        # Explicit `homes` in config wins; otherwise auto-discover ~/.claude* homes.
+        homes = self.config.get("homes") or _discover_homes()
         now = time.time()
         today_start = _local_midnight(now)
         week_start = now - _WEEK
