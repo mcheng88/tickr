@@ -119,6 +119,7 @@ class TickrApp(App):
     .side { width: 56; height: 1fr; }
     .fill { width: 1fr; height: 1fr; }
     SectionPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 1; }
+    SectionPanel.grow { height: 1fr; }  /* last panel in a side column fills the leftover height */
     NewsPanel { border: round #5f5f5f; padding: 0 1; height: 1fr; }
     NewsPanel > .option-list--option-highlighted { background: $accent 30%; color: $text; }
     """
@@ -152,8 +153,13 @@ class TickrApp(App):
         with Horizontal():
             for ci, col in enumerate(self.columns):
                 with Vertical(classes="fill" if ci == last else "side"):
-                    for name in col:
-                        yield self.widgets[name]
+                    for ri, name in enumerate(col):
+                        w = self.widgets[name]
+                        # In a side column, let the bottom panel stretch to fill
+                        # the leftover vertical space (no dead gap below it).
+                        if ci != last and ri == len(col) - 1 and isinstance(w, SectionPanel):
+                            w.add_class("grow")
+                        yield w
         yield Footer()
 
     def on_mount(self) -> None:
