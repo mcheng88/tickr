@@ -3,8 +3,8 @@
 [dashboard]
 theme = "tokyo-night"
 # Layout: a list of columns, each a list of stacked panels. The last column
-# flexes to fill the window width. Available: "stocks", "claude_usage", "news".
-columns = [["stocks", "claude_usage"], ["news"]]
+# flexes to fill the window width. Available: "stocks", "claude_usage", "predict", "news".
+columns = [["stocks", "claude_usage", "predict"], ["news"]]
 # Default seconds between data fetches (a source can override its own).
 refresh_seconds = 60
 # Animation cadence — how often the pane redraws (drives the news ticker crawl).
@@ -61,6 +61,17 @@ feeds = [
 # Drop headlines containing any of these (case-insensitive substrings). Safety net
 # on top of topic feeds — catches stray celebrity/sport/royal items that slip in.
 exclude = ["horoscope", "celebrity", "kardashian", "royal family"]
+
+[predict]
+# Live Polymarket odds (public Gamma API, no key). One line per event: the
+# favorite outcome's probability + its 24h move. Ordered by 24h volume.
+refresh_seconds = 300
+count = 12              # how many markets to show
+# Polymarket tag slugs to pull from (try: politics, geopolitics, world,
+# elections, economy). NO crypto. `tickr` ships a sensible default of ["politics"].
+tags = ["politics"]
+# Drop markets whose label contains any of these (case-insensitive):
+exclude = ["# tweets", "tweets"]
 
 [stocks]
 # Yahoo Finance symbols. Plain tickers work as-is (AAPL, NVDA). Indices use a
