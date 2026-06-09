@@ -188,8 +188,10 @@ class TickrApp(App):
     .side { width: 56; height: 1fr; }
     .fill { width: 1fr; height: 1fr; }
     SectionPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 1; }
-    DataPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 1; }
-    NewsPanel { border: round #5f5f5f; padding: 0 1; height: 1fr; }
+    DataPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 1;
+                scrollbar-size-vertical: 1; }
+    NewsPanel { border: round #5f5f5f; padding: 0 1; height: 1fr; scrollbar-size-vertical: 1; }
+    OptionList > .option-list--option { padding: 0; }  /* drop the default per-row padding */
     .grow { height: 1fr; }  /* last panel in a side column fills the leftover height */
     DataPanel:focus, NewsPanel:focus { border: round $accent; }
     DataPanel > .option-list--option-highlighted,

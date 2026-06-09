@@ -161,24 +161,25 @@ class StocksSource(Source):
             t.add_row(Text(label, style="bold"), Text(f"{q.last:,.2f}"), chg)
         return t
 
-    def list_rows(self, data: list[Quote], width: int) -> list[tuple[Text, str]]:
-        price_w, chg_w = 11, 9
-        label_w = max(6, width - price_w - chg_w - 2)
-        rows: list[tuple[Text, str]] = []
+    def list_rows(self, data: list[Quote], width: int) -> list[tuple[Table, str]]:
+        rows: list[tuple[Table, str]] = []
         for q in data or []:
             label = _LABELS.get(q.symbol, q.symbol.lstrip("^"))
-            label = (label[: label_w - 1] + "…") if len(label) > label_w else label.ljust(label_w)
-            t = Text()
-            t.append(label, style="bold")
             if q.last is None:
-                t.append(f"{'—':>{price_w}}", style="dim")
-                t.append(f"{'·':>{chg_w + 1}}", style="dim")
+                price, chg, chg_style = Text("—", style="dim"), Text("·", style="dim"), None
             else:
                 up = (q.change_pct or 0) >= 0
-                t.append(f"{q.last:>{price_w},.2f}")
-                chg = "—" if q.change_pct is None else f"{'▲' if up else '▼'}{abs(q.change_pct):.2f}%"
-                t.append(f"{chg:>{chg_w + 1}}", style="dim" if q.change_pct is None else ("green" if up else "red"))
-            rows.append((t, q.symbol))
+                price = Text(f"{q.last:,.2f}")
+                if q.change_pct is None:
+                    chg, chg_style = Text("—", style="dim"), None
+                else:
+                    chg = Text(f"{'▲' if up else '▼'}{abs(q.change_pct):.2f}%", style="green" if up else "red")
+            g = Table.grid(expand=True, padding=(0, 1))
+            g.add_column(no_wrap=True)
+            g.add_column(ratio=1, justify="right", no_wrap=True)
+            g.add_column(justify="right", no_wrap=True, width=8)
+            g.add_row(Text(label, style="bold"), price, chg)
+            rows.append((g, q.symbol))
         return rows
 
     def detail(self, key: str, data: list[Quote]) -> Group:

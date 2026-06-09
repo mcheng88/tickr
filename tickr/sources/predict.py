@@ -110,17 +110,25 @@ class PredictSource(Source):
         return Text(f"{('▲' if up else '▼') + str(round(abs(delta))):>{width}}",
                     style="green" if up else "red")
 
-    def list_rows(self, data: list[Market], width: int) -> list[tuple[Text, str]]:
-        pct_w, d_w = 5, 4
-        label_w = max(6, width - pct_w - d_w - 2)
-        rows: list[tuple[Text, str]] = []
+    def list_rows(self, data: list[Market], width: int) -> list[tuple[Table, str]]:
+        rows: list[tuple[Table, str]] = []
         for i, m in enumerate(data or []):
-            label = (m.label[: label_w - 1] + "…") if len(m.label) > label_w else m.label.ljust(label_w)
-            t = Text(label)
-            t.append(f"{m.pct:>{pct_w - 1}.0f}%", style="bold cyan")
-            t.append(" ")
-            t.append_text(self._delta_text(m.delta, d_w))
-            rows.append((t, str(i)))
+            # Lead with the answer (favorite outcome) so a bare % isn't useless;
+            # the event title follows as dim context. Single binary markets (one
+            # outcome) just show the question.
+            fav = m.outcomes[0].name if len(m.outcomes) > 1 else ""
+            label = Text(no_wrap=True, overflow="ellipsis")
+            if fav:
+                label.append(fav, style="default")
+                label.append(f"  {m.label}", style="dim")
+            else:
+                label.append(m.label)
+            g = Table.grid(expand=True, padding=(0, 1))
+            g.add_column(ratio=1, no_wrap=True, overflow="ellipsis")
+            g.add_column(justify="right", no_wrap=True, width=4)
+            g.add_column(justify="right", no_wrap=True, width=3)
+            g.add_row(label, Text(f"{m.pct:.0f}%", style="bold cyan"), self._delta_text(m.delta, 3))
+            rows.append((g, str(i)))
         return rows
 
     def detail(self, key: str, data: list[Market]) -> Group:
