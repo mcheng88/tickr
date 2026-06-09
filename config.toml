@@ -3,8 +3,9 @@
 [dashboard]
 theme = "tokyo-night"
 # Layout: a list of columns, each a list of stacked panels. The last column
-# flexes to fill the window width. Available: "stocks", "claude_usage", "predict", "news".
-columns = [["stocks", "claude_usage", "predict"], ["news"]]
+# flexes to fill the window width.
+# Available: "weather", "stocks", "claude_usage", "predict", "news".
+columns = [["weather", "stocks", "claude_usage", "predict"], ["news"]]
 # Default seconds between data fetches (a source can override its own).
 refresh_seconds = 60
 # Animation cadence — how often the pane redraws (drives the news ticker crawl).
@@ -61,6 +62,15 @@ feeds = [
 # Drop headlines containing any of these (case-insensitive substrings). Safety net
 # on top of topic feeds — catches stray celebrity/sport/royal items that slip in.
 exclude = ["horoscope", "celebrity", "kardashian", "royal family"]
+
+[weather]
+# Current conditions + 4-day forecast as ASCII art (Open-Meteo, no key).
+refresh_seconds = 900
+unit = "fahrenheit"     # or "celsius"
+# Location auto-detects from your IP. Pin it to skip detection (and fix VPN drift):
+# latitude = 37.77
+# longitude = -122.42
+# label = "San Francisco"
 
 [predict]
 # Live Polymarket odds (public Gamma API, no key). One line per event: the
