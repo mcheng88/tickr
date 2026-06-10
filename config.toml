@@ -67,7 +67,9 @@ exclude = ["horoscope", "celebrity", "kardashian", "royal family"]
 # Current conditions + 4-day forecast as ASCII art (Open-Meteo, no key).
 refresh_seconds = 900
 unit = "fahrenheit"     # or "celsius"
-# Location auto-detects from your IP. Pin it to skip detection (and fix VPN drift):
+# Location auto-detects: macOS Location Services first (grant your terminal app
+# permission in System Settings > Privacy > Location Services), IP as fallback.
+# Pin it to skip detection entirely:
 # latitude = 37.77
 # longitude = -122.42
 # label = "San Francisco"

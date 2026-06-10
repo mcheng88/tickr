@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
@@ -11,11 +12,14 @@ from rich.text import Text
 
 from .base import Source
 
-# Open-Meteo (no key) for the forecast; ip-api (no key) to guess location when
-# the config doesn't pin one. ASCII art is the wttr.in aesthetic — a weather
-# glyph drawn in characters, no image rendering needed.
+# Open-Meteo (no key) for the forecast. Location: config pin > macOS Location
+# Services (CoreLocation, Wi-Fi positioning) > ip-api IP guess — IP geolocation
+# drifts to the VPN/CDN egress city (Cloudflare WARP once put us in Aurora, CO).
+# ASCII art is the wttr.in aesthetic — a weather glyph drawn in characters,
+# no image rendering needed.
 _UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 _GEO = "http://ip-api.com/json/?fields=city,regionName,lat,lon"
+_REVGEO = "https://api.bigdatacloud.net/data/reverse-geocode-client"  # keyless
 _FORECAST = "https://api.open-meteo.com/v1/forecast"
 
 # WMO weather code -> condition group.
@@ -70,6 +74,55 @@ def _get(url: str) -> dict:
         return json.loads(r.read())
 
 
+def _device_location() -> tuple[float, float, str] | None:
+    """Ask macOS Location Services for the device position.
+
+    Returns None off-macOS (pyobjc not installed), when the terminal app lacks
+    Location Services permission, or on timeout — caller falls back to IP.
+    CoreLocation is callback-based, so we poll while pumping this thread's
+    runloop; works from worker threads as well as the main one.
+    """
+    try:
+        import CoreLocation
+        from Foundation import NSDate, NSRunLoop
+    except ImportError:
+        return None
+
+    runloop = NSRunLoop.currentRunLoop()
+    mgr = CoreLocation.CLLocationManager.alloc().init()
+    mgr.requestWhenInUseAuthorization()
+    mgr.startUpdatingLocation()
+    loc = None
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        runloop.runUntilDate_(NSDate.dateWithTimeIntervalSinceNow_(0.2))
+        loc = mgr.location()
+        if loc is not None:
+            break
+    mgr.stopUpdatingLocation()
+    if loc is None:
+        return None
+    coord = loc.coordinate()
+    lat, lon = float(coord.latitude), float(coord.longitude)
+    return lat, lon, _reverse_geocode(lat, lon)
+
+
+def _reverse_geocode(lat: float, lon: float) -> str:
+    """Coords -> "City, Region" label. CLGeocoder won't do: its completion
+    handler fires on the main thread's runloop, which Textual's asyncio loop
+    never pumps — so use a keyless HTTP service instead. Empty label on failure
+    is fine; fetch() renders bare coords then."""
+    try:
+        q = urllib.parse.urlencode(
+            {"latitude": lat, "longitude": lon, "localityLanguage": "en"})
+        g = _get(f"{_REVGEO}?{q}")
+        return ", ".join(
+            x for x in (g.get("city") or g.get("locality"),
+                        g.get("principalSubdivision")) if x)
+    except Exception:
+        return ""
+
+
 _DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
@@ -96,7 +149,9 @@ class WeatherSource(Source):
         lat, lon = self.config.get("latitude"), self.config.get("longitude")
         if lat is not None and lon is not None:
             return float(lat), float(lon), str(self.config.get("label", "")).strip()
-        if self._loc is None:  # geolocate once via IP, then cache
+        if self._loc is None:  # resolve once, then cache: device GPS/Wi-Fi first
+            self._loc = _device_location()
+        if self._loc is None:  # last resort: IP geolocation (drifts under VPN)
             g = _get(_GEO)
             city = ", ".join(x for x in (g.get("city"), g.get("regionName")) if x)
             self._loc = (float(g["lat"]), float(g["lon"]), city)
