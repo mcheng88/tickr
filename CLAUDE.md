@@ -78,6 +78,8 @@ GitHub Issues in `mcheng88/tickr`. Open:
 - #6 reader + news polish (reader half done; remaining: parallelize news fetch,
   per-feed source labels, richer extraction)
 - #7 user widgets dir (`~/.config/tickr/widgets/*.py`)
+- #8 dedicated Treasury rates panel (T-bills incl. 26wk + yield curve, via Treasury
+  par-yield-curve API — Yahoo only has 13wk `^IRX`, can't do 26wk)
 
 Done (#1 prediction markets, and unticketed: weather panel, interactive panels +
 detail popups, preset catalog, theme persistence, usage auto-discovery).
