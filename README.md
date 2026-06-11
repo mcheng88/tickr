@@ -45,6 +45,7 @@ throttled per source.
 | `←` / `→` | move focus between panels (incl. into the left column from news) |
 | `enter` / `o` / click | open the highlighted row — article reader (news) or detail popup (stocks/predict) |
 | `space` | pause/resume the news auto-scroll |
+| `s` | settings — add/remove tickers, prediction tags, Claude accounts, news feeds (saves live) |
 | `Ctrl-P` | command palette (switch theme — it autosaves) |
 | `esc` / `q` | close a popup |
 
