@@ -210,7 +210,11 @@ class ListEditScreen(ModalScreen):
     #editlist { height: auto; max-height: 18; }
     #editempty { color: $text-muted; }
     """
-    BINDINGS = [("escape", "close", "Done")]
+    BINDINGS = [
+        ("escape", "close", "Done"),
+        ("shift+up", "move(-1)", "Move up"),
+        ("shift+down", "move(1)", "Move down"),
+    ]
 
     def __init__(self, field: dict, values: list[str]):
         super().__init__()
@@ -223,7 +227,7 @@ class ListEditScreen(ModalScreen):
         with box:
             yield Static(
                 f"{self.field['hint']}\n"
-                "Type a value + Enter to add · Enter/click a row to remove · Esc when done",
+                "Type+Enter adds · Enter/click a row removes · Shift+↑/↓ reorders · Esc when done",
                 id="edithint",
             )
             yield Input(placeholder="add new value…", id="editadd")
@@ -234,7 +238,7 @@ class ListEditScreen(ModalScreen):
         self._refresh_list()
         self.query_one("#editadd", Input).focus()
 
-    def _refresh_list(self) -> None:
+    def _refresh_list(self, highlight: int | None = None) -> None:
         ol = self.query_one("#editlist", OptionList)
         ol.clear_options()
         if not self.values:
@@ -243,6 +247,8 @@ class ListEditScreen(ModalScreen):
         # markup=False semantics: values can contain '[' (URLs, etc.) — render
         # literally via Text(). id is the position so removal is unambiguous.
         ol.add_options([Option(Text(f"• {v}"), id=str(i)) for i, v in enumerate(self.values)])
+        if highlight is not None:
+            ol.highlighted = highlight
 
     def _save(self) -> None:
         self.app.save_setting(self.field["table"], self.field["key"], self.values)
@@ -256,6 +262,21 @@ class ListEditScreen(ModalScreen):
         self.values.append(val)
         self._save()
         self._refresh_list()
+
+    def action_move(self, delta: int) -> None:
+        """Shift the highlighted row up/down one slot — order is meaningful (it's
+        the panel's display order). Keeps the highlight on the moved item."""
+        ol = self.query_one("#editlist", OptionList)
+        i = ol.highlighted
+        if i is None or not self.values:
+            return
+        j = i + delta
+        if j < 0 or j >= len(self.values):
+            return  # already at an end
+        self.values[i], self.values[j] = self.values[j], self.values[i]
+        self._save()
+        self._refresh_list(highlight=j)
+        ol.focus()
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         event.stop()
