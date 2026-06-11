@@ -30,12 +30,14 @@ Reinstall after dependency changes: `uv tool install --editable . --force`.
 - **Everything is `config.toml`** — there's no separate settings store. Adding
   tickers/feeds/panels = editing that file.
 - **In-app settings editor** (`s` key → `SettingsScreen` in `tui.py`): a modal to
-  add/remove list-valued config without leaving the dashboard — stock tickers,
-  prediction (Polymarket) tags, Claude account homes, news feeds. Type+Enter adds,
-  Enter/click a row removes. Writes go through `configwrite.set_list` (tomlkit, so
-  config.toml's comments survive) and live-refresh the affected panel via
-  `save_setting` → `_kickoff`. To expose a new field, add it to `SETTINGS_FIELDS`
-  (table+key+label+hint) — only list-of-strings fields are supported.
+  add/remove/reorder list-valued config without leaving the dashboard — stock
+  tickers, prediction (Polymarket) tags, Claude account homes, news feeds. The
+  list is "home" (focused on open, row highlighted): ↑/↓ select, Shift+↑/↓ reorder
+  (order is the panel's display order), ⌫/Del removes (explicit — selecting a row
+  never deletes by surprise), Tab → the add box → Enter adds. Writes go through
+  `configwrite.set_list` (tomlkit, so config.toml's comments survive) and
+  live-refresh the affected panel via `save_setting` → `_kickoff`. To expose a new
+  field, add it to `SETTINGS_FIELDS` (table+key+label+hint) — list-of-strings only.
 - **Preset catalog** (`tickr/presets.toml` + `tickr/catalog.py`): curated, named
   groups of feeds-by-topic and ticker-sets. Reference by name instead of pasting
   URLs/symbols: `[news] topics = [...]`, `[stocks] sets = [...]` (merged with any

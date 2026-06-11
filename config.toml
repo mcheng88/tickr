@@ -27,6 +27,7 @@ fullscreen = true
 # ~/.claude -> "default"). Shows API-equivalent $ today/week + the 5-hour window.
 # Uncomment to pin an explicit list instead of auto-discovery:
 # homes = ["~/.claude", "~/.claude-berry", "~/.claude-cheng"]
+homes = ["~/.claude", "~/.claude-berry"]
 
 [news]
 # Vertical headline feed (top-stories firehose). Shows `rows` headlines and
@@ -81,7 +82,7 @@ refresh_seconds = 300
 count = 12              # how many markets to show
 # Polymarket tag slugs to pull from (try: politics, geopolitics, world,
 # elections, economy). NO crypto. `tickr` ships a sensible default of ["politics"].
-tags = ["politics"]
+tags = ["politics", "Basketball"]
 # Drop markets whose label contains any of these (case-insensitive):
 exclude = ["# tweets", "tweets"]
 
@@ -92,4 +93,17 @@ exclude = ["# tweets", "tweets"]
 # Shortcut: `sets` references curated ticker groups from the catalog (run
 # `tickr catalog`), merged with any explicit `tickers` below. e.g.:
 # sets = ["indices", "gold"]
-tickers = ["^GSPC", "^IXIC", "NVDA", "AAPL", "GOOG", "MSFT", "AMZN", "META", "TSLA", "GC=F"]
+tickers = [
+    "^GSPC",
+    "^IXIC",
+    "NVDA",
+    "AAPL",
+    "GOOG",
+    "MSFT",
+    "AMZN",
+    "META",
+    "TSLA",
+    "GC=F",
+    "EAT",
+    "^IRX",
+]

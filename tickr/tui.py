@@ -214,6 +214,8 @@ class ListEditScreen(ModalScreen):
         ("escape", "close", "Done"),
         ("shift+up", "move(-1)", "Move up"),
         ("shift+down", "move(1)", "Move down"),
+        ("backspace", "remove", "Remove"),
+        ("delete", "remove", "Remove"),
     ]
 
     def __init__(self, field: dict, values: list[str]):
@@ -227,28 +229,28 @@ class ListEditScreen(ModalScreen):
         with box:
             yield Static(
                 f"{self.field['hint']}\n"
-                "Type+Enter adds · Enter/click a row removes · Shift+↑/↓ reorders · Esc when done",
+                "↑/↓ select · Shift+↑/↓ reorder · ⌫ remove · Tab → add box · Esc when done",
                 id="edithint",
             )
-            yield Input(placeholder="add new value…", id="editadd")
+            yield Input(placeholder="type a value + Enter to add…", id="editadd")
             yield OptionList(id="editlist")
         yield Footer()
 
     def on_mount(self) -> None:
-        self._refresh_list()
-        self.query_one("#editadd", Input).focus()
+        self._refresh_list(highlight=0)
+        self.query_one("#editlist", OptionList).focus()  # list is home: arrows/reorder/remove ready
 
     def _refresh_list(self, highlight: int | None = None) -> None:
         ol = self.query_one("#editlist", OptionList)
         ol.clear_options()
         if not self.values:
-            ol.add_option(Option(Text("(none — empty)"), id=None))
+            ol.add_option(Option(Text("(none yet — Tab to the box above to add)"), id=None))
             return
         # markup=False semantics: values can contain '[' (URLs, etc.) — render
         # literally via Text(). id is the position so removal is unambiguous.
         ol.add_options([Option(Text(f"• {v}"), id=str(i)) for i, v in enumerate(self.values)])
-        if highlight is not None:
-            ol.highlighted = highlight
+        if highlight is not None and self.values:
+            ol.highlighted = max(0, min(highlight, len(self.values) - 1))
 
     def _save(self) -> None:
         self.app.save_setting(self.field["table"], self.field["key"], self.values)
@@ -261,7 +263,22 @@ class ListEditScreen(ModalScreen):
             return  # ignore blanks and duplicates
         self.values.append(val)
         self._save()
-        self._refresh_list()
+        # Return home to the list, highlighting the new (last) row so it's
+        # immediately reorderable/removable.
+        self._refresh_list(highlight=len(self.values) - 1)
+        self.query_one("#editlist", OptionList).focus()
+
+    def action_remove(self) -> None:
+        """Remove the highlighted row (⌫/Del). Explicit, so navigating/clicking a
+        row never deletes it by surprise."""
+        ol = self.query_one("#editlist", OptionList)
+        i = ol.highlighted
+        if i is None or not self.values:
+            return
+        del self.values[i]
+        self._save()
+        self._refresh_list(highlight=i)  # keep the cursor near where it was
+        ol.focus()
 
     def action_move(self, delta: int) -> None:
         """Shift the highlighted row up/down one slot — order is meaningful (it's
@@ -277,14 +294,6 @@ class ListEditScreen(ModalScreen):
         self._save()
         self._refresh_list(highlight=j)
         ol.focus()
-
-    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
-        event.stop()
-        if event.option.id is None:  # the "(none)" placeholder
-            return
-        del self.values[int(event.option.id)]
-        self._save()
-        self._refresh_list()
 
     def action_close(self) -> None:
         self.dismiss()
