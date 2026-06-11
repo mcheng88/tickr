@@ -2,6 +2,14 @@
 
 Terminal dashboard for ambient feeds of "things that move." Personal tool for Matt.
 
+## Mode: ALWAYS EXECUTOR (never orchestrator)
+
+When a session is rooted in `tickr/`, you are an **executor**, not an orchestrator.
+The mcheng-brain "default to orchestrator" banner does **not** apply here. Do the
+work directly: read the code, design, implement, test, commit. Never draft a
+dispatch prompt for tickr work, never tell Matt to spin up a fresh session for it.
+This overrides the brain's orchestrator default. Surfaced 2026-06-11.
+
 ## Product preferences (do not relitigate)
 
 - **No crypto. Ever.** Never propose crypto tickers (BTC/ETH/etc.), a crypto panel,
