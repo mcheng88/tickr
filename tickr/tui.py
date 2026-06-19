@@ -13,7 +13,7 @@ from textual.widgets.option_list import Option
 
 from .app import _layout_columns, load_config
 from .reader import fetch_article
-from .sources import load_source
+from .sources import discover_widgets, load_source
 
 # Sources are non-interactive panels (a rich renderable refreshed on a timer);
 # "news" is special — an interactive, scrollable, selectable headline list.
@@ -622,6 +622,7 @@ def main(argv: list[str] | None = None) -> None:
         print(render_catalog(args.name))
         return
 
+    discover_widgets()  # register ~/.config/tickr/widgets/*.py before sources load
     TickrApp(load_config()).run()
 
 
