@@ -136,6 +136,7 @@ frame on failure. A built-in panel = one file in `tickr/sources/` registered in
 ## Roadmap
 
 - [x] **stocks** — watchlist + indices via Yahoo (batched, true day-change)
+- [x] **rates** — US Treasury par yield curve (bill ladder incl. 26wk + 2Y/5Y/10Y/30Y), yields in %, day-over-day move in bp; press `r` for the full curve (#8)
 - [x] **claude usage** — token/cost today + week + 5h-window, auto-discovered across accounts (100% local)
 - [x] **news** — curated RSS feeds + in-terminal reader (arXiv full-text, paywall fallback)
 - [x] **prediction markets** — Polymarket live odds, with per-event outcome detail

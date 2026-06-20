@@ -4,8 +4,8 @@
 theme = "tokyo-night"
 # Layout: a list of columns, each a list of stacked panels. The last column
 # flexes to fill the window width.
-# Available: "weather", "stocks", "claude_usage", "predict", "news".
-columns = [["weather", "stocks", "predict", "claude_usage"], ["news"]]
+# Available: "weather", "stocks", "rates", "claude_usage", "predict", "news".
+columns = [["weather", "stocks", "rates", "predict", "claude_usage"], ["news"]]
 # Default seconds between data fetches (a source can override its own).
 refresh_seconds = 60
 # Animation cadence — how often the pane redraws (drives the news ticker crawl).
@@ -85,6 +85,15 @@ count = 12              # how many markets to show
 tags = ["politics", "Basketball"]
 # Drop markets whose label contains any of these (case-insensitive):
 exclude = ["# tweets", "tweets"]
+
+[rates]
+# US Treasury daily par yield curve — free, no API key. The always-on panel
+# shows the bill ladder (4wk/8wk/13wk/17wk/26wk/52wk) plus 2Y/5Y/10Y/30Y; the
+# 26-week bill is emphasised. Yields are shown as %, with the day-over-day move
+# in basis points. Press `r` (or enter/click the panel) for the full curve —
+# every tenor including 3Y/7Y/20Y. Treasury posts once per business day, so the
+# refresh is slow on purpose.
+refresh_seconds = 3600
 
 [stocks]
 # Yahoo Finance symbols. Plain tickers work as-is (AAPL, NVDA). Indices use a
