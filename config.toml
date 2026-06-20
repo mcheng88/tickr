@@ -4,8 +4,8 @@
 theme = "tokyo-night"
 # Layout: a list of columns, each a list of stacked panels. The last column
 # flexes to fill the window width.
-# Available: "weather", "stocks", "rates", "claude_usage", "predict", "news".
-columns = [["weather", "stocks", "rates", "predict", "claude_usage"], ["news"]]
+# Available: "weather", "stocks", "rates", "claude_usage", "predict", "oddities", "news".
+columns = [["weather", "stocks", "rates", "predict", "claude_usage", "oddities"], ["news"]]
 # Default seconds between data fetches (a source can override its own).
 refresh_seconds = 60
 # Animation cadence — how often the pane redraws (drives the news ticker crawl).
@@ -116,3 +116,14 @@ tickers = [
     "EAT",
     "^IRX",
 ]
+
+[oddities]
+# Ambient-delight panel: next rocket launch + live countdown (Launch Library 2),
+# recent earthquakes (USGS GeoJSON), and where the ISS is right now
+# (wheretheiss.at). All free, no API key. A short refresh keeps the ISS sub-point
+# moving; the launch + quake feeds are cached internally on longer cadences so
+# the panel stays polite to each upstream (Launch Library throttles anon clients).
+refresh_seconds = 30
+min_mag = 2.5        # only show quakes at/above this magnitude
+quake_rows = 4       # how many recent quakes to list
+place_width = 26     # truncate the quake location to this many columns
