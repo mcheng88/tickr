@@ -82,6 +82,46 @@ Reference curated **feed topics** and **ticker sets** by name instead of pasting
 URLs/symbols — browse them with `tickr catalog`. Point `TICKR_CONFIG` at a config
 elsewhere if you like.
 
+## Custom panels (your widgets library)
+
+Drop a `.py` file in `~/.config/tickr/widgets/` and any `Source` subclass it
+defines is auto-discovered at startup and usable like a built-in — no editing of
+the installed package. This makes the panel system a library you curate.
+
+```bash
+mkdir -p ~/.config/tickr/widgets
+cp examples/widgets/uptime.py ~/.config/tickr/widgets/
+```
+
+Then name it in `config.toml` (the key is the class's `name` attribute, or the
+filename stem if you omit `name`):
+
+```toml
+[dashboard]
+columns = [["stocks", "uptime"], ["news"]]
+
+[uptime]            # this table is passed to the source as self.config
+label = "since boot"
+```
+
+The `Source` contract (see [`tickr/sources/base.py`](tickr/sources/base.py)):
+
+| member | purpose |
+|--------|---------|
+| `title` | header text shown on the panel |
+| `name` | registry key for `[dashboard].columns` (optional; defaults to filename) |
+| `fetch()` | pull a little data; cheap; **may** raise (last good frame is kept) |
+| `render(data)` | draw `data` to a rich renderable; must **not** raise |
+| `status()` | optional one-word badge (e.g. `OPEN`/`CLOSED`); `""` for none |
+
+A worked example with comments is in [`examples/widgets/uptime.py`](examples/widgets/uptime.py).
+
+Discovery is **fail-soft**: a widget that fails to import or defines no `Source`
+prints a warning to stderr and is skipped — one bad file never crashes the app.
+Files starting with `_` are treated as support modules and ignored. Point
+`TICKR_WIDGETS_DIR` elsewhere to override the location (and `XDG_CONFIG_HOME` is
+honored for the default).
+
 ## Architecture
 
 Every panel is one `Source` (`tickr/sources/base.py`): a `fetch()` that pulls a little
@@ -89,8 +129,9 @@ data, and either a `render()` (static panels) or `list_rows()` + `detail()` (int
 panels — focusable, selectable, with a detail popup). The app ([`tickr/tui.py`](tickr/tui.py),
 a [Textual](https://textual.textualize.io/) app) lays the configured sources out in
 columns, fetches each on its own interval in a worker thread, and keeps the last good
-frame on failure. Adding a panel = one file in `tickr/sources/` registered in
-`sources/__init__.py`.
+frame on failure. A built-in panel = one file in `tickr/sources/` registered in
+`sources/__init__.py`; a personal panel = one file in `~/.config/tickr/widgets/`
+(see [Custom panels](#custom-panels-your-widgets-library)).
 
 ## Roadmap
 
@@ -100,8 +141,10 @@ frame on failure. Adding a panel = one file in `tickr/sources/` registered in
 - [x] **prediction markets** — Polymarket live odds, with per-event outcome detail
 - [x] **weather** — ASCII-art current + forecast (Open-Meteo)
 - [x] **interactive panels** — keyboard nav + detail popups; preset catalog; theme persistence
+- [x] **per-panel loading/failed state** — loading/stale/failed badge per panel (#5)
+- [x] **user widgets** — drop a `Source` in `~/.config/tickr/widgets/` and use it like a built-in (#7)
 - [ ] **world oddities** — next rocket launch, earthquakes, ISS overhead (#2)
 - [ ] **usage consumption bars** — needs plan caps (#4)
-- [ ] **per-panel loading/failed state** (#5) · **resizable columns** (#3) · **user widgets dir** (#7)
+- [ ] **resizable columns** (#3)
 
 Cross-platform (macOS + Linux). Runs great in [kitty](https://sw.kovidgoyal.net/kitty/).

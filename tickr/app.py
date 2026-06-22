@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .sources import load_source
+from .sources import discover_widgets, load_source
 
 
 def _find_config() -> Path:
@@ -89,6 +89,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--once", action="store_true", help="render a single frame and exit (sanity check / screenshot)")
     args = ap.parse_args(argv)
 
+    discover_widgets()  # register ~/.config/tickr/widgets/*.py before sources load
     cfg = load_config()
     dash = cfg.get("dashboard", {})
     default_refresh = int(dash.get("refresh_seconds", 60))
