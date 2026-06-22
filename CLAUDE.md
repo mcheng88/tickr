@@ -73,15 +73,13 @@ Reinstall after dependency changes: `uv tool install --editable . --force`.
 ## Backlog
 
 GitHub Issues in `mcheng88/tickr`. Open:
-- #2 world oddities panel (launch / quakes / ISS)
 - #3 resizable columns (fill-height done)
 - #4 usage consumption bars (needs plan caps)
-- #5 per-panel loading/failed state
 - #6 reader + news polish (reader half done; remaining: parallelize news fetch,
   per-feed source labels, richer extraction)
-- #7 user widgets dir (`~/.config/tickr/widgets/*.py`)
-- #8 dedicated Treasury rates panel (T-bills incl. 26wk + yield curve, via Treasury
-  par-yield-curve API — Yahoo only has 13wk `^IRX`, can't do 26wk)
 
-Done (#1 prediction markets, and unticketed: weather panel, interactive panels +
-detail popups, preset catalog, theme persistence, usage auto-discovery).
+Done (#1 prediction markets, #2 world oddities panel (launch / quakes / ISS),
+#5 per-panel loading/stale/failed state, #7 user widgets dir
+(`~/.config/tickr/widgets/*.py`), #8 dedicated Treasury rates panel (T-bills incl.
+26wk + yield curve); and unticketed: weather panel, interactive panels + detail
+popups, preset catalog, theme persistence, usage auto-discovery).
