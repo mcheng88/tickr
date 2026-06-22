@@ -3,6 +3,7 @@ from __future__ import annotations
 from .base import Source
 from .claude_usage import ClaudeUsageSource
 from .news import NewsSource
+from .oddities import OdditiesSource
 from .predict import PredictSource
 from .rates import RatesSource
 from .stocks import StocksSource
@@ -18,6 +19,7 @@ SOURCES: dict[str, type[Source]] = {
     "predict": PredictSource,
     "weather": WeatherSource,
     "rates": RatesSource,
+    "oddities": OdditiesSource,
 }
 
 _discovered = False

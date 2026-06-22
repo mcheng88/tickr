@@ -144,7 +144,7 @@ frame on failure. A built-in panel = one file in `tickr/sources/` registered in
 - [x] **interactive panels** — keyboard nav + detail popups; preset catalog; theme persistence
 - [x] **per-panel loading/failed state** — loading/stale/failed badge per panel (#5)
 - [x] **user widgets** — drop a `Source` in `~/.config/tickr/widgets/` and use it like a built-in (#7)
-- [ ] **world oddities** — next rocket launch, earthquakes, ISS overhead (#2)
+- [x] **world oddities** — next rocket launch + live countdown, recent earthquakes, ISS overhead (#2)
 - [ ] **usage consumption bars** — needs plan caps (#4)
 - [ ] **resizable columns** (#3)
 
