@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import webbrowser
 from functools import partial
+from time import monotonic
 
 from rich.text import Text
 from textual.app import App, ComposeResult
@@ -19,31 +20,81 @@ from .sources import load_source
 _NEWS = "news"
 
 
-class SectionPanel(Static):
+class _PanelStatus:
+    """Mixin: folds a subtle loading/stale/failed indicator into a panel's
+    ``border_title`` so a blank or unchanging panel is always explained.
+
+    State machine: panels start ``loading``; a good fetch flips them to ``ok``;
+    a failed/empty fetch flips them to ``failed``. A panel that has shown data
+    before keeps showing it on failure, but the indicator turns to ``stale Ns``
+    (the age of the last good frame) so the staleness is visible rather than
+    silent. Subclasses provide ``refresh_title`` to compose the full header."""
+
+    def _init_status(self) -> None:
+        self._ok_at: float | None = None  # monotonic time of last good fetch
+        self._state = "loading"  # loading → ok → failed
+
+    def mark_ok(self) -> None:
+        self._ok_at = monotonic()
+        self._state = "ok"
+
+    def mark_failed(self) -> None:
+        self._state = "failed"
+        self.refresh_title()  # show it immediately, don't wait for the 1s tick
+
+    def _indicator(self) -> str:
+        """Rich-markup status badge, or empty string when healthy and fresh."""
+        if self._state == "loading":
+            return "[dim]loading…[/dim]"
+        if self._state == "failed":
+            if self._ok_at is None:
+                return "[red dim]failed[/red dim]"
+            return f"[yellow dim]stale {int(monotonic() - self._ok_at)}s[/yellow dim]"
+        return ""
+
+    def refresh_title(self) -> None:  # pragma: no cover - overridden
+        raise NotImplementedError
+
+
+class SectionPanel(Static, _PanelStatus):
     """A non-interactive source panel: titled border + rendered body, refreshed
     on the source's own interval."""
 
     def __init__(self, source):
         super().__init__()
         self.source = source
-        self.border_title = source.title
+        self._init_status()
+        self.refresh_title()
 
     def apply(self, data) -> None:
-        st = self.source.status()
-        self.border_title = f"{self.source.title}  {st}".rstrip()
+        self.mark_ok()
         self.update(self.source.render(data))
+        self.refresh_title()
+
+    def refresh_title(self) -> None:
+        parts = [self.source.title]
+        st = self.source.status()
+        if st:
+            parts.append(st)
+        ind = self._indicator()
+        if ind:
+            parts.append(ind)
+        self.border_title = "  ".join(parts)
 
 
-class NewsPanel(OptionList):
+class NewsPanel(OptionList, _PanelStatus):
     """Scrollable, selectable headline feed. Auto-advances (ambient) unless
     paused; arrows/j-k scroll; enter or click opens the article."""
 
     def __init__(self, source):
         super().__init__()
         self.source = source
-        self.border_title = "NEWS"
+        self.paused = False
+        self._init_status()
+        self.refresh_title()
 
     def apply(self, items: list[tuple[str, str]]) -> None:
+        self.mark_ok()
         keep = self.highlighted
         self.clear_options()
         # Option ids must be unique; feeds occasionally repeat a URL, so drop
@@ -61,6 +112,16 @@ class NewsPanel(OptionList):
         self.add_options(opts)
         if keep is not None and self.option_count:
             self.highlighted = min(keep, self.option_count - 1)
+        self.refresh_title()
+
+    def refresh_title(self) -> None:
+        parts = ["NEWS"]
+        if self.paused:
+            parts.append("(paused)")
+        ind = self._indicator()
+        if ind:
+            parts.append(ind)
+        self.border_title = "  ".join(parts)
 
     def advance(self) -> None:
         if self.option_count:
@@ -68,17 +129,19 @@ class NewsPanel(OptionList):
             self.highlighted = (cur + 1) % self.option_count
 
 
-class DataPanel(OptionList):
+class DataPanel(OptionList, _PanelStatus):
     """Interactive tabular panel (stocks, predict). ↑/↓ moves the row cursor;
     enter / 'o' / click opens a detail popup for the highlighted row."""
 
     def __init__(self, source):
         super().__init__()
         self.source = source
-        self.border_title = source.title
         self._data = None
+        self._init_status()
+        self.refresh_title()
 
     def apply(self, data) -> None:
+        self.mark_ok()
         self._data = data
         keep = self.highlighted
         self.clear_options()
@@ -89,8 +152,17 @@ class DataPanel(OptionList):
             self.highlighted = min(keep, self.option_count - 1)
         elif self.option_count:
             self.highlighted = 0  # show a cursor row from the start
+        self.refresh_title()
+
+    def refresh_title(self) -> None:
+        parts = [self.source.title]
         st = self.source.status()
-        self.border_title = f"{self.source.title}  {st}".rstrip()
+        if st:
+            parts.append(st)
+        ind = self._indicator()
+        if ind:
+            parts.append(ind)
+        self.border_title = "  ".join(parts)
 
     def open_detail(self) -> None:
         if self.highlighted is None or self._data is None:
@@ -420,7 +492,13 @@ class TickrApp(App):
         if _NEWS in self.widgets:
             self.set_interval(self.scroll_seconds, self._advance_news)
             self.widgets[_NEWS].focus()
+        # Keep "stale Ns" counters ticking while a panel sits failed/unrefreshed.
+        self.set_interval(1, self._refresh_statuses)
         self._theme_ready = True  # from here on, theme changes autosave
+
+    def _refresh_statuses(self) -> None:
+        for w in self.widgets.values():
+            w.refresh_title()
 
     def watch_theme(self, theme: str) -> None:
         """Persist the theme to config.toml whenever it changes (e.g. picked live
@@ -438,7 +516,8 @@ class TickrApp(App):
             data = self.sources[name].fetch()
         except Exception:
             data = None
-        if not data:  # failed or empty → retry soon instead of waiting the full interval
+        if not data:  # failed or empty → flag the panel, retry soon
+            self.call_from_thread(self.widgets[name].mark_failed)
             self.call_from_thread(self.set_timer, 5, partial(self._kickoff, name))
             return
         self.call_from_thread(self.widgets[name].apply, data)
@@ -453,7 +532,8 @@ class TickrApp(App):
         self.paused = not self.paused
         news = self.widgets.get(_NEWS)
         if news is not None:
-            news.border_title = "NEWS  (paused)" if self.paused else "NEWS"
+            news.paused = self.paused
+            news.refresh_title()
 
     def _open(self, option) -> None:
         if option is not None and option.id:
