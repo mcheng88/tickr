@@ -16,8 +16,10 @@ from .reader import fetch_article
 from .sources import discover_widgets, load_source
 
 # Sources are non-interactive panels (a rich renderable refreshed on a timer);
-# "news" is special — an interactive, scrollable, selectable headline list.
+# "news" is special — an interactive, scrollable, selectable headline list, and
+# "rates" pops a full-curve detail screen on enter/click.
 _NEWS = "news"
+_RATES = "rates"
 
 
 class _PanelStatus:
@@ -80,6 +82,70 @@ class SectionPanel(Static, _PanelStatus):
         if ind:
             parts.append(ind)
         self.border_title = "  ".join(parts)
+
+
+class RatesPanel(SectionPanel):
+    """Treasury rates panel: the always-on curated ladder, focusable so enter or
+    a click pops the full par yield curve in a modal."""
+
+    can_focus = True
+    BINDINGS = [("enter", "detail", "Full curve")]
+
+    def __init__(self, source):
+        super().__init__(source)
+        self._data = None
+
+    def apply(self, data) -> None:
+        self._data = data
+        super().apply(data)
+
+    def action_detail(self) -> None:
+        if self._data is not None:
+            self.app.push_screen(RatesScreen(self.source, self._data))
+
+    def on_click(self) -> None:
+        self.action_detail()
+
+    def refresh_title(self) -> None:
+        # Compose the base title (incl. the #9 loading/stale/failed indicator,
+        # which the 1s status tick keeps refreshing), then append the popup hint
+        # so it survives every refresh instead of being overwritten once.
+        super().refresh_title()
+        self.border_title = f"{self.border_title}  ↵ curve"
+
+
+class RatesScreen(ModalScreen):
+    """Full US Treasury par yield curve — every tenor, with day-over-day basis-
+    point moves. The panel shows a curated ladder; this shows the whole thing."""
+
+    CSS = """
+    RatesScreen { align: center middle; }
+    #curve { width: 48; height: auto; max-height: 90%; border: round #5f5f5f; background: $surface; padding: 1 2; }
+    #curve-title { text-style: bold; color: $accent; }
+    #curve-meta { color: $text-muted; margin-bottom: 1; }
+    """
+    BINDINGS = [
+        ("escape", "close", "Close"),
+        ("q", "close", "Close"),
+    ]
+
+    def __init__(self, source, data):
+        super().__init__()
+        self.source = source
+        self.data = data
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="curve"):
+            yield Static("US Treasury par yield curve", id="curve-title")
+            sub = self.data.date
+            if self.data.prior_date:
+                sub += f"  (Δbp vs {self.data.prior_date})"
+            yield Static(sub, id="curve-meta")
+            yield Static(self.source.render_detail(self.data))
+        yield Footer()
+
+    def action_close(self) -> None:
+        self.dismiss()
 
 
 class NewsPanel(OptionList, _PanelStatus):
@@ -439,6 +505,7 @@ class TickrApp(App):
         ("left", "focus_panel('prev')", "Prev panel"),
         ("right", "focus_panel('next')", "Next panel"),
         ("o", "open", "Open / detail"),
+        ("r", "rates_detail", "Treasury curve"),
         ("s", "settings", "Settings"),
         ("q", "quit", "Quit"),
     ]
@@ -462,6 +529,8 @@ class TickrApp(App):
         src = self.sources[name]
         if name == _NEWS:
             return NewsPanel(src)
+        if name == _RATES:
+            return RatesPanel(src)
         if getattr(src, "interactive", False):
             return DataPanel(src)
         return SectionPanel(src)
@@ -539,6 +608,11 @@ class TickrApp(App):
         if option is not None and option.id:
             headline = str(option.prompt).lstrip("• ").strip()
             self.push_screen(ArticleScreen(option.id, headline))
+
+    def action_rates_detail(self) -> None:
+        panel = self.widgets.get(_RATES)
+        if isinstance(panel, RatesPanel):
+            panel.action_detail()
 
     def action_open(self) -> None:
         f = self.focused

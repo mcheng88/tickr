@@ -4,6 +4,7 @@ from .base import Source
 from .claude_usage import ClaudeUsageSource
 from .news import NewsSource
 from .predict import PredictSource
+from .rates import RatesSource
 from .stocks import StocksSource
 from .userdir import load_user_widgets
 from .weather import WeatherSource
@@ -16,6 +17,7 @@ SOURCES: dict[str, type[Source]] = {
     "news": NewsSource,
     "predict": PredictSource,
     "weather": WeatherSource,
+    "rates": RatesSource,
 }
 
 _discovered = False
