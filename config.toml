@@ -105,16 +105,16 @@ refresh_seconds = 3600
 tickers = [
     "^GSPC",
     "^IXIC",
+    "^IRX",
     "NVDA",
     "AAPL",
     "GOOG",
-    "MSFT",
     "AMZN",
     "META",
     "TSLA",
     "GC=F",
     "EAT",
-    "^IRX",
+    "MSFT",
 ]
 
 [oddities]
