@@ -186,7 +186,14 @@ class WeatherSource(Source):
 
     def render(self, w: Weather) -> Group:
         grp = _group(w.code)
-        art = Text("\n".join(_ART[grp]), style=_ART_STYLE[grp])
+        # Some glyphs (cloudy/partly/fog) carry blank top/bottom rows for visual
+        # centering; strip them so the panel doesn't waste vertical space.
+        rows = list(_ART[grp])
+        while rows and not rows[0].strip():
+            rows.pop(0)
+        while rows and not rows[-1].strip():
+            rows.pop()
+        art = Text("\n".join(rows), style=_ART_STYLE[grp])
 
         stats = Table.grid(padding=(0, 0))
         temp = f"{w.temp:.0f}°{w.unit}" if w.temp is not None else "—"
@@ -216,4 +223,4 @@ class WeatherSource(Source):
                      style="grey70")
                 for dow, code, hi, lo in w.days
             ])
-        return Group(Text(w.place, style="bold cyan"), head, Text(""), forecast)
+        return Group(Text(w.place, style="bold cyan"), head, forecast)

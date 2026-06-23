@@ -43,8 +43,10 @@ _CURVE: list[tuple[str, str]] = [
 ]
 
 # Curated subset shown in the always-on panel; the detail popup shows _CURVE
-# in full. 26wk is Matt's priority bill, so it's emphasised in render().
-_LADDER = {"4wk", "8wk", "13wk", "17wk", "26wk", "52wk", "2Y", "5Y", "10Y", "30Y"}
+# in full. 26wk is Matt's priority bill, so it's emphasised in render(). Kept
+# compact by default so the panel doesn't dominate its column — override per
+# config with `[rates] ladder = ["4wk", "26wk", ...]`.
+_LADDER_DEFAULT = ["4wk", "13wk", "26wk", "52wk", "2Y", "10Y", "30Y"]
 _HERO = "26wk"
 
 
@@ -152,8 +154,65 @@ class RatesSource(Source):
     def render(self, data: Curve) -> Table:
         if data is None:
             return Table.grid()
-        return self._table([ten for ten in data.tenors if ten.label in _LADDER])
+        ladder = set(self.config.get("ladder", _LADDER_DEFAULT))
+        return self._table([ten for ten in data.tenors if ten.label in ladder])
 
     def render_detail(self, data: Curve) -> Table:
         """Full curve — every tenor — for the interactive detail popup."""
         return self._table(data.tenors)
+
+    def render_curve(self, data: Curve, width: int = 40, height: int = 8) -> Text:
+        """An ASCII line chart of the par yield curve: x = tenor (left→right,
+        short→long), y = yield. A continuous interpolated line with a ``●`` at
+        each real tenor, plus a small yield gutter. Pure-text, no deps."""
+        pts = [(i, t.yld) for i, t in enumerate(data.tenors) if t.yld is not None]
+        if len(pts) < 2:
+            return Text("(not enough data to plot)", style="dim")
+        n = len(data.tenors)
+        ys = [y for _, y in pts]
+        lo, hi = min(ys), max(ys)
+        if hi - lo < 1e-9:
+            hi = lo + 0.01  # flat curve → avoid divide-by-zero
+        gutter = 6  # width of the "x.xx%" y-axis labels
+        W = max(16, width - gutter)
+        H = max(4, height)
+
+        def interp(fi: float) -> float:
+            """Piecewise-linear yield at fractional tenor index ``fi``."""
+            for (a, ya), (b, yb) in zip(pts, pts[1:]):
+                if a <= fi <= b:
+                    return ya + (yb - ya) * (fi - a) / (b - a) if b != a else ya
+            return pts[0][1] if fi < pts[0][0] else pts[-1][1]
+
+        def row_of(y: float) -> int:
+            return H - 1 - round((y - lo) / (hi - lo) * (H - 1))
+
+        grid = [[" "] * W for _ in range(H)]
+        for x in range(W):
+            fi = x * (n - 1) / (W - 1)
+            grid[row_of(interp(fi))][x] = "·"
+        for i, y in pts:  # overlay real tenors on top of the interpolated line
+            grid[row_of(y)][round(i * (W - 1) / (n - 1))] = "●"
+
+        out = Text()
+        for r, line in enumerate(grid):
+            if r == 0:
+                label = f"{hi:.2f}%"
+            elif r == H - 1:
+                label = f"{lo:.2f}%"
+            else:
+                label = ""
+            out.append(f"{label:>{gutter - 1}} ", style="dim")
+            for ch in line:
+                out.append(ch, style="bold green" if ch == "●" else ("green" if ch == "·" else " "))
+            out.append("\n")
+        # x-axis: first / middle / last tenor labels under the plot
+        first, mid, last = data.tenors[0].label, data.tenors[n // 2].label, data.tenors[-1].label
+        line = [" "] * W
+        for label, pos in ((first, 0), (mid, (W - len(mid)) // 2), (last, W - len(last))):
+            for k, c in enumerate(label):
+                if 0 <= pos + k < W:
+                    line[pos + k] = c
+        out.append(" " * gutter, style="dim")
+        out.append("".join(line), style="dim")
+        return out

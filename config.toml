@@ -12,6 +12,10 @@ refresh_seconds = 60
 tick_seconds = 0.5
 # Width (columns) of the left side panels. Widen if usage numbers get clipped.
 left_width = 56
+# Per-panel height: add `height = N` (rows) to any panel's own table below to
+# pin it to N rows instead of fitting its content — content scrolls inside if it
+# overflows. Lets you stop a tall panel (e.g. rates) from dominating its column.
+# Unset = auto (fit content), the default. e.g. under [rates]: height = 8
 # true  = take over the window (clean dedicated panel; Ctrl-C restores your shell).
 # false = render inline under your prompt (you can keep typing, but it restacks).
 fullscreen = true
@@ -88,12 +92,16 @@ exclude = ["# tweets", "tweets"]
 
 [rates]
 # US Treasury daily par yield curve — free, no API key. The always-on panel
-# shows the bill ladder (4wk/8wk/13wk/17wk/26wk/52wk) plus 2Y/5Y/10Y/30Y; the
-# 26-week bill is emphasised. Yields are shown as %, with the day-over-day move
-# in basis points. Press `r` (or enter/click the panel) for the full curve —
-# every tenor including 3Y/7Y/20Y. Treasury posts once per business day, so the
-# refresh is slow on purpose.
+# shows a compact ladder (4wk/13wk/26wk/52wk/2Y/10Y/30Y); the 26-week bill is
+# emphasised. Yields are shown as %, with the day-over-day move in basis points.
+# Press `r` (or enter/click the panel) for the full curve — every tenor plus an
+# ASCII chart. Treasury posts once per business day, so the refresh is slow on
+# purpose.
 refresh_seconds = 3600
+# Which tenors show in the always-on panel (the `r` popup always shows the full
+# curve + an ASCII chart). Default is a compact set so the panel stays short:
+# ladder = ["4wk", "13wk", "26wk", "52wk", "2Y", "10Y", "30Y"]
+# height = 9   # or pin the panel height (rows) and let it scroll
 
 [stocks]
 # Yahoo Finance symbols. Plain tickers work as-is (AAPL, NVDA). Indices use a

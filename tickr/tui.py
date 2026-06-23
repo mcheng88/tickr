@@ -6,6 +6,7 @@ from time import monotonic
 
 from rich.text import Text
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Footer, Header, Input, OptionList, Static
@@ -100,8 +101,10 @@ class RatesPanel(SectionPanel):
         super().apply(data)
 
     def action_detail(self) -> None:
-        if self._data is not None:
-            self.app.push_screen(RatesScreen(self.source, self._data))
+        # Open the popup even before the (slow, once-on-startup) Treasury fetch
+        # lands — RatesScreen shows a "loading" state for None data, so `r`
+        # always gives feedback instead of silently doing nothing.
+        self.app.push_screen(RatesScreen(self.source, self._data))
 
     def on_click(self) -> None:
         self.action_detail()
@@ -120,9 +123,10 @@ class RatesScreen(ModalScreen):
 
     CSS = """
     RatesScreen { align: center middle; }
-    #curve { width: 48; height: auto; max-height: 90%; border: round #5f5f5f; background: $surface; padding: 1 2; }
+    #curve { width: 54; height: auto; max-height: 90%; border: round #5f5f5f; background: $surface; padding: 1 2; }
     #curve-title { text-style: bold; color: $accent; }
     #curve-meta { color: $text-muted; margin-bottom: 1; }
+    #curve-plot { margin-bottom: 1; }
     """
     BINDINGS = [
         ("escape", "close", "Close"),
@@ -137,10 +141,15 @@ class RatesScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical(id="curve"):
             yield Static("US Treasury par yield curve", id="curve-title")
+            if self.data is None:
+                yield Static("loading…", id="curve-meta")
+                yield Footer()
+                return
             sub = self.data.date
             if self.data.prior_date:
                 sub += f"  (Δbp vs {self.data.prior_date})"
             yield Static(sub, id="curve-meta")
+            yield Static(self.source.render_curve(self.data, width=48, height=8), id="curve-plot")
             yield Static(self.source.render_detail(self.data))
         yield Footer()
 
@@ -487,9 +496,14 @@ class TickrApp(App):
     TITLE = "tickr"
     CSS = """
     Screen { background: $background; }
-    .side { width: 56; height: 1fr; }
+    /* The stacked side column scrolls when its panels total more than the
+       window height — so a tall panel (e.g. oddities at the bottom) is reachable
+       instead of clipped. Panels stay content-sized, so there's no wasted
+       whitespace when everything already fits. */
+    .side { width: 56; height: 1fr; overflow-y: auto; scrollbar-size-vertical: 1; }
     .fill { width: 1fr; height: 1fr; }
-    SectionPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 0; }
+    SectionPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: auto; margin-bottom: 0;
+                   overflow-y: auto; scrollbar-size-vertical: 1; }
     /* Interactive list panels flex to share the column height and scroll inside
        when content overflows — so the column always fills and never spills. */
     DataPanel { border: round #5f5f5f; padding: 0 1; width: 1fr; height: 1fr; min-height: 5;
@@ -500,13 +514,17 @@ class TickrApp(App):
     DataPanel > .option-list--option-highlighted,
     NewsPanel > .option-list--option-highlighted { background: $accent 30%; color: $text; }
     """
+    # `s`/`r` are marked priority so they're resolved at the App level *before*
+    # the focused widget's own binding chain. Some terminals (kitty keyboard
+    # protocol) otherwise let a focused OptionList swallow these two specific
+    # keys; priority bindings sidestep that. See action_settings/rates_detail.
     BINDINGS = [
         ("space", "toggle_pause", "Pause/resume scroll"),
         ("left", "focus_panel('prev')", "Prev panel"),
         ("right", "focus_panel('next')", "Next panel"),
         ("o", "open", "Open / detail"),
-        ("r", "rates_detail", "Treasury curve"),
-        ("s", "settings", "Settings"),
+        Binding("r", "rates_detail", "Treasury curve", priority=True),
+        Binding("s", "settings", "Settings", priority=True),
         ("q", "quit", "Quit"),
     ]
 
@@ -554,6 +572,13 @@ class TickrApp(App):
         if self.left_width:
             for node in self.query(".side"):
                 node.styles.width = int(self.left_width)
+        # Per-panel height: `[<panel>] height = N` pins that panel to N rows
+        # (content scrolls inside if it overflows) so a tall panel like rates
+        # doesn't dominate its column. Unset = auto (fit content), the default.
+        for name in self.names:
+            h = self.cfg.get(name, {}).get("height")
+            if h:
+                self.widgets[name].styles.height = int(h)
         for name in self.names:
             self._kickoff(name)  # initial fetch
             interval = int(self.cfg.get(name, {}).get("refresh_seconds", self.default_refresh))
