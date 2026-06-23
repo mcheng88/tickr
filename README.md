@@ -44,6 +44,7 @@ throttled per source.
 | `↑` / `↓` | move the row cursor in the focused panel |
 | `←` / `→` | move focus between panels (incl. into the left column from news) |
 | `enter` / `o` / click | open the highlighted row — article reader (news) or detail popup (stocks/predict) |
+| `r` | open the full Treasury yield curve (rates detail popup) |
 | `space` | pause/resume the news auto-scroll |
 | `s` | settings — add/remove tickers, prediction tags, Claude accounts, news feeds (saves live) |
 | `Ctrl-P` | command palette (switch theme — it autosaves) |
@@ -56,9 +57,11 @@ All free, no API keys.
 | Panel | What it shows |
 |-------|---------------|
 | **stocks** | Watchlist + indices via Yahoo (batched, true day-change, market state). Gold/oil/rates work too (`GC=F`, `CL=F`, `^TNX`). |
+| **rates** | US Treasury par yield curve — bill ladder (4wk–52wk, 26wk emphasised) + 2Y/5Y/10Y/30Y in %, day-over-day move in bp. Press `r` for the full curve (every tenor). |
 | **news** | Curated headlines from direct RSS feeds, deduped + newest-first. Open any in an in-terminal reader (full arXiv papers; paywalled sources fall back to the browser). |
 | **predict** | Live Polymarket odds by topic — favorite outcome + 24h move; drill in for the full outcome list. |
 | **weather** | Current conditions + 4-day forecast as ASCII art (Open-Meteo; location auto-detects). |
+| **oddities** | Ambient delight — next rocket launch + live countdown, recent earthquakes (USGS), and where the ISS is right now. All free, no key. |
 | **claude usage** | Claude Code token/cost today + week + 5-hour window, auto-discovered across `~/.claude*` accounts (100% local). |
 
 ## Configure
