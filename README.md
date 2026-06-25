@@ -2,6 +2,13 @@
 
 A Bloomberg terminal from first principles — ambient feeds of **things that move**, sized for a corner of your terminal so you can stay where you work.
 
+![tickr demo](assets/demo.gif)
+
+> **Zero config, no API keys.** Every panel runs on free, keyless public APIs —
+> markets (Yahoo), prediction odds (Polymarket), the US Treasury par yield curve,
+> weather (Open-Meteo), the ISS, earthquakes (USGS) and rocket launches. Nothing to
+> sign up for, nothing to paste in. Install it and it just works.
+
 Not a to-do list, not a project dashboard. Just live, glanceable signal: markets, prediction odds, curated headlines, and other fast-changing numbers. A source earns a permanent corner of your screen only if it **moves fast enough to reward a glance**.
 
 ```
@@ -18,14 +25,22 @@ Not a to-do list, not a project dashboard. Just live, glanceable signal: markets
 
 ## Install
 
-Requires Python 3.11+. Recommended — puts a `tickr` command on your PATH (editable,
-so source edits take effect on next launch):
+Requires Python 3.11+. Clone, then install into a virtualenv:
+
+```bash
+git clone https://github.com/mcheng88/tickr.git
+cd tickr
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e .
+tickr
+```
+
+Prefer [uv](https://github.com/astral-sh/uv)? This puts a `tickr` command on your PATH,
+editable so source edits take effect on next launch — run it from anywhere:
 
 ```bash
 uv tool install --editable .
 ```
-
-Or in a virtualenv: `python3 -m venv .venv && source .venv/bin/activate && pip install -e .`
 
 ## Run
 
@@ -152,3 +167,13 @@ frame on failure. A built-in panel = one file in `tickr/sources/` registered in
 - [ ] **resizable columns** (#3)
 
 Cross-platform (macOS + Linux). Runs great in [kitty](https://sw.kovidgoyal.net/kitty/).
+
+## Contributing
+
+The easiest contribution is a widget — drop a `Source` subclass in
+`~/.config/tickr/widgets/` (start from [`examples/widgets/uptime.py`](examples/widgets/uptime.py)).
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE) © 2026 Matthew Cheng
