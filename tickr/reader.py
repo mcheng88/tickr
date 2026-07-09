@@ -5,6 +5,8 @@ import urllib.error
 import urllib.request
 from html.parser import HTMLParser
 
+from .textnorm import normalize
+
 _UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 _SKIP = {"script", "style", "nav", "aside", "figure", "footer", "header", "form"}
 # Paragraphs only — pulling headings/list items drags in nav menus on most sites.
@@ -79,7 +81,7 @@ def _get_html(url: str, timeout: int) -> str:
 def _extract(html: str) -> str:
     parser = _Article()
     parser.feed(html)
-    text = "".join(parser.parts).strip()
+    text = normalize("".join(parser.parts).strip())
     while "\n\n\n" in text:  # collapse runs of blank lines
         text = text.replace("\n\n\n", "\n\n")
     return text or "(couldn't extract readable text — try opening in the browser with 'b')"

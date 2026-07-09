@@ -10,6 +10,7 @@ from rich.console import Group
 from rich.text import Text
 
 from .base import Source
+from ..textnorm import normalize
 
 # Google News RSS — free, no key. Default is the top-stories firehose; set a
 # `query` in config for a topical firehose instead.
@@ -25,7 +26,7 @@ def _parse_feed(url: str) -> list[tuple[str, str, float]]:
         root = ET.fromstring(r.read())
     out: list[tuple[str, str, float]] = []
     for item in root.findall(".//item"):
-        title = (item.findtext("title") or "").strip()
+        title = normalize((item.findtext("title") or "").strip())
         if not title:
             continue
         link = (item.findtext("link") or "").strip()
@@ -46,7 +47,7 @@ def _fetch_items(url: str, count: int, exclude: list[str]) -> list[tuple[str, st
         root = ET.fromstring(r.read())
     items: list[tuple[str, str]] = []
     for item in root.findall(".//item"):
-        title = (item.findtext("title") or "").strip()
+        title = normalize((item.findtext("title") or "").strip())
         src = item.find("source")
         if src is not None and src.text and title.endswith(f" - {src.text}"):
             title = title[: -len(f" - {src.text}")].strip()  # drop " - Publisher"
