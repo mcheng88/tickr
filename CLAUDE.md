@@ -80,12 +80,13 @@ Reinstall after dependency changes: `uv tool install --editable . --force`.
 
 GitHub Issues in `mcheng88/tickr`. Open:
 - #4 usage consumption bars (needs plan caps)
-- #6 reader + news polish (reader half done; remaining: parallelize news fetch,
-  per-feed source labels, richer extraction)
 
 Done (#1 prediction markets, #2 world oddities panel (launch / quakes / ISS),
 #3 resizable columns (fill-height in CSS + live `[`/`]` width nudge, autosaved),
-#5 per-panel loading/stale/failed state, #7 user widgets dir
+#5 per-panel loading/stale/failed state, #6 reader + news polish (reader:
+article/main-scoped extraction incl. headings/list items, PDF magic-byte
+sniffing, thin-content/paywall hint; news: concurrent multi-feed fetch +
+optional `[news] show_source` publisher labels), #7 user widgets dir
 (`~/.config/tickr/widgets/*.py`), #8 dedicated Treasury rates panel (T-bills incl.
 26wk + yield curve); and unticketed: weather panel, interactive panels + detail
 popups, preset catalog, theme persistence, usage auto-discovery).
