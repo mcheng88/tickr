@@ -34,3 +34,19 @@ def set_list(table: str, key: str, values: list[str]) -> None:
     tbl[key] = arr
 
     path.write_text(tomlkit.dumps(doc))
+
+
+def set_value(table: str, key: str, value) -> None:
+    """Set a scalar ``[table].key`` (int/float/str/bool), creating the table/key
+    if absent, and write config.toml back in place with comments preserved. Used
+    for live layout tweaks like the ``[dashboard].left_width`` column-width nudge."""
+    path = _find_config()
+    doc = tomlkit.parse(path.read_text())
+
+    tbl = doc.get(table)
+    if tbl is None:
+        tbl = tomlkit.table()
+        doc[table] = tbl
+
+    tbl[key] = value
+    path.write_text(tomlkit.dumps(doc))

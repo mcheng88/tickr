@@ -46,6 +46,12 @@ Reinstall after dependency changes: `uv tool install --editable . --force`.
 - **Theme** persists via `[dashboard].theme`. Switch live (Ctrl-P → theme) and it
   **autosaves** — `watch_theme` → `_persist_theme` in `tui.py`, gated by `_ready`
   so startup doesn't write, idempotent so palette previews don't thrash the file.
+- **Column width** persists via `[dashboard].left_width` (columns of the fixed
+  side panels; the last column flexes). Nudge it live with `[` (narrower) / `]`
+  (wider) — `action_nudge_width` → `_persist_left_width` (tomlkit `set_value`,
+  comment-preserving). Clamped to `[_MIN_SIDE_WIDTH, window − _FILL_FLOOR]` and a
+  no-op when there's only one column (nothing flexes beside it). Fill-height is
+  handled purely in CSS (`.side`/`.fill` are `height: 1fr`).
 
 ## Architecture notes
 
@@ -73,12 +79,12 @@ Reinstall after dependency changes: `uv tool install --editable . --force`.
 ## Backlog
 
 GitHub Issues in `mcheng88/tickr`. Open:
-- #3 resizable columns (fill-height done)
 - #4 usage consumption bars (needs plan caps)
 - #6 reader + news polish (reader half done; remaining: parallelize news fetch,
   per-feed source labels, richer extraction)
 
 Done (#1 prediction markets, #2 world oddities panel (launch / quakes / ISS),
+#3 resizable columns (fill-height in CSS + live `[`/`]` width nudge, autosaved),
 #5 per-panel loading/stale/failed state, #7 user widgets dir
 (`~/.config/tickr/widgets/*.py`), #8 dedicated Treasury rates panel (T-bills incl.
 26wk + yield curve); and unticketed: weather panel, interactive panels + detail

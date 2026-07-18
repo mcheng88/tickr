@@ -22,6 +22,14 @@ from .sources import discover_widgets, load_source
 _NEWS = "news"
 _RATES = "rates"
 
+# Live column-width nudge (Issue #3). The side column(s) have a fixed width and
+# the last column flexes to fill the rest; `[` / `]` nudge that width live and
+# persist it to [dashboard].left_width. Clamped so neither side vanishes.
+_DEFAULT_SIDE_WIDTH = 56
+_MIN_SIDE_WIDTH = 24
+_WIDTH_STEP = 4  # columns per nudge
+_FILL_FLOOR = 20  # keep at least this many cols for the flexing (news) column
+
 
 class _PanelStatus:
     """Mixin: folds a subtle loading/stale/failed indicator into a panel's
@@ -525,6 +533,10 @@ class TickrApp(App):
         ("o", "open", "Open / detail"),
         Binding("r", "rates_detail", "Treasury curve", priority=True),
         Binding("s", "settings", "Settings", priority=True),
+        # Live column-width nudge. Priority so a focused OptionList (kitty keyboard
+        # protocol) can't swallow them — same reason `s`/`r` are priority.
+        Binding("[", "nudge_width(-1)", "Narrower side", priority=True),
+        Binding("]", "nudge_width(1)", "Wider side", priority=True),
         ("q", "quit", "Quit"),
     ]
 
@@ -570,8 +582,7 @@ class TickrApp(App):
             except Exception:
                 pass  # unknown theme name in config → keep default
         if self.left_width:
-            for node in self.query(".side"):
-                node.styles.width = int(self.left_width)
+            self._apply_side_width(int(self.left_width))
         # Per-panel height: `[<panel>] height = N` pins that panel to N rows
         # (content scrolls inside if it overflows) so a tall panel like rates
         # doesn't dominate its column. Unset = auto (fit content), the default.
@@ -662,6 +673,34 @@ class TickrApp(App):
     def action_settings(self) -> None:
         self.push_screen(SettingsScreen())
 
+    # --- live column resize (Issue #3) ---
+
+    def _apply_side_width(self, width: int) -> None:
+        """Set the width of every fixed (non-flexing) side column."""
+        for node in self.query(".side"):
+            node.styles.width = width
+
+    def _max_side_width(self) -> int:
+        """Widest a side column may get while leaving the flexing column room.
+        Shared across all side columns, so the ceiling shrinks with their count."""
+        n_sides = max(1, len(self.columns) - 1)  # last column always flexes
+        return max(_MIN_SIDE_WIDTH, (self.size.width - _FILL_FLOOR) // n_sides)
+
+    def action_nudge_width(self, direction: int) -> None:
+        """`[` / `]` widen or narrow the fixed side column(s) live, then persist
+        the new width to [dashboard].left_width so it survives a restart."""
+        if len(self.columns) < 2:
+            return  # single column: nothing flexes beside it, so width is moot
+        cur = int(self.left_width or _DEFAULT_SIDE_WIDTH)
+        new = cur + direction * _WIDTH_STEP
+        new = max(_MIN_SIDE_WIDTH, min(new, self._max_side_width()))
+        if new == cur:
+            return  # already at a bound — don't thrash the file
+        self.left_width = new
+        self._apply_side_width(new)
+        self._persist_left_width(new)
+        self.notify(f"Side column width: {new}", timeout=1.5)
+
     # --- settings persistence ---
 
     def setting_values(self, table: str, key: str) -> list[str]:
@@ -683,6 +722,15 @@ class TickrApp(App):
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         if isinstance(event.option_list, NewsPanel):  # DataPanels handle their own
             self._open(event.option)
+
+    def _persist_left_width(self, width: int) -> None:
+        """Write the nudged side-column width into [dashboard].left_width via
+        tomlkit so config.toml's comments survive (same path the Settings editor
+        uses for list fields)."""
+        from .configwrite import set_value
+
+        set_value("dashboard", "left_width", width)
+        self.cfg.setdefault("dashboard", {})["left_width"] = width
 
     def _persist_theme(self, theme: str) -> None:
         """Write the theme into config.toml's [dashboard] table. Idempotent —
