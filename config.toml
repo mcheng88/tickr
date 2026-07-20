@@ -11,6 +11,8 @@ refresh_seconds = 60
 # Animation cadence — how often the pane redraws (drives the news ticker crawl).
 tick_seconds = 0.5
 # Width (columns) of the left side panels. Widen if usage numbers get clipped.
+# Nudge it live from the dashboard with `[` (narrower) and `]` (wider) — the new
+# width autosaves back here. The last column flexes to fill the rest of the window.
 left_width = 56
 # Per-panel height: add `height = N` (rows) to any panel's own table below to
 # pin it to N rows instead of fitting its content — content scrolls inside if it
