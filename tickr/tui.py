@@ -176,22 +176,26 @@ class NewsPanel(OptionList, _PanelStatus):
         self._init_status()
         self.refresh_title()
 
-    def apply(self, items: list[tuple[str, str]]) -> None:
+    def apply(self, items: list[tuple[str, str, str]]) -> None:
         self.mark_ok()
         keep = self.highlighted
         self.clear_options()
+        show_source = bool(self.source.config.get("show_source", False))
         # Option ids must be unique; feeds occasionally repeat a URL, so drop
         # later duplicates (items without a link keep id=None, never collide).
         seen: set[str] = set()
         opts = []
-        for t, link in items:
+        for t, link, source in items:
             if link and link in seen:
                 continue
             if link:
                 seen.add(link)
             # Text() prompt → rendered literally; a headline with '[' won't be
             # mis-parsed as Rich markup (would crash the OptionList).
-            opts.append(Option(Text(f"• {t}"), id=(link or None)))
+            row = Text(f"• {t}")
+            if show_source and source:
+                row.append(f"  {source}", style="dim")
+            opts.append(Option(row, id=(link or None)))
         self.add_options(opts)
         if keep is not None and self.option_count:
             self.highlighted = min(keep, self.option_count - 1)

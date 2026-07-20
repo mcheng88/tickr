@@ -44,6 +44,7 @@ homes = ["~/.claude", "~/.claude-berry"]
 refresh_seconds = 300
 rows = 14             # how many headlines visible at once
 scroll_seconds = 4   # seconds before the feed advances one headline
+# show_source = true   # append a dim publisher label (e.g. "BBC") to each headline
 # Direct RSS feeds — real article links, so cmd-click and the in-terminal reader
 # (enter / o) work. Merged + deduped + sorted newest-first.
 # Curated to business / finance / econ / tech / politics — topic-specific section
