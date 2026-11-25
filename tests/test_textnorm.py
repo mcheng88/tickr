@@ -43,6 +43,16 @@ class ReaderIntegrationTests(unittest.TestCase):
             self.assertNotIn(bad, out)
         self.assertIn('"The prosecutor\'s office"', out)
 
+    def test_extract_empty_fallback_is_ascii(self) -> None:
+        out = _extract("<html><body><script>x()</script></body></html>")
+        self.assertTrue(out.startswith("(couldn't extract readable text"))
+        self.assertTrue(out.isascii(), out)
+
+    def test_extract_thin_hint_is_ascii(self) -> None:
+        out = _extract("<p>Short body.</p>")
+        self.assertIn("This looks truncated", out)
+        self.assertTrue(out.isascii(), out)
+
 
 if __name__ == "__main__":
     unittest.main()

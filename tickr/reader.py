@@ -132,7 +132,7 @@ def _extract(html: str) -> str:
     while "\n\n\n" in text:  # collapse runs of blank lines
         text = text.replace("\n\n\n", "\n\n")
     if not text:
-        return "(couldn't extract readable text — try opening in the browser with 'b')"
+        return "(couldn't extract readable text -- try opening in the browser with 'b')"
     if len(text) < _THIN:
         text += ("\n\n-- This looks truncated (paywall or a page that renders its "
                  "body in JavaScript). Press 'b' to open the full article in your browser.")
