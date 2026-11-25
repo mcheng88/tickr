@@ -134,7 +134,7 @@ def _extract(html: str) -> str:
     if not text:
         return "(couldn't extract readable text — try opening in the browser with 'b')"
     if len(text) < _THIN:
-        text += ("\n\n— This looks truncated (paywall or a page that renders its "
+        text += ("\n\n-- This looks truncated (paywall or a page that renders its "
                  "body in JavaScript). Press 'b' to open the full article in your browser.")
     return text
 
